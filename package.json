@@ -1,0 +1,45 @@
+{
+  "name": "ai-automation-pipeline",
+  "version": "1.0.0",
+  "description": "AI-powered news pipeline that discovers, filters, and transforms news into Instagram posts and trivia quizzes using Google Gemini",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "nodemon src/index.ts",
+    "build": "npx prisma generate && npx tsc",
+    "start": "node dist/index.js",
+    "postinstall": "npx prisma generate"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "ai",
+    "automation",
+    "pipeline",
+    "gemini",
+    "news",
+    "trivia",
+    "quiz"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/genai": "^1.43.0",
+    "@prisma/client": "^5.22.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "ioredis": "^5.9.3",
+    "node-cron": "^4.2.1",
+    "openai": "^6.25.0",
+    "prisma": "^5.22.0",
+    "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.3.2",
+    "@types/node-cron": "^3.0.11",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

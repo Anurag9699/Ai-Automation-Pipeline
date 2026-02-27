@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Content Pipeline</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Satoshi:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #09090b;
+            font-family: 'Satoshi', -apple-system, sans-serif;
+            color: #a1a1aa;
+            overflow-x: hidden;
+        }
+
+        /* Animated background orbs */
+        .bg-orbs {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .bg-orbs::before,
+        .bg-orbs::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.12;
+        }
+
+        .bg-orbs::before {
+            width: 600px;
+            height: 600px;
+            background: #6366f1;
+            top: -200px;
+            left: -100px;
+            animation: orbFloat 20s ease-in-out infinite;
+        }
+
+        .bg-orbs::after {
+            width: 500px;
+            height: 500px;
+            background: #06b6d4;
+            bottom: -150px;
+            right: -100px;
+            animation: orbFloat 25s ease-in-out infinite reverse;
+        }
+
+        @keyframes orbFloat {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            33% {
+                transform: translate(60px, 40px) scale(1.1);
+            }
+
+            66% {
+                transform: translate(-40px, 60px) scale(0.95);
+            }
+        }
+
+        /* Bento cards with glow */
+        .bento {
+            background: rgba(24, 24, 27, 0.8);
+            border: 1px solid #27272a;
+            border-radius: var(--radius);
+            transition: border-color 0.4s, box-shadow 0.4s, transform 0.3s;
+            backdrop-filter: blur(12px);
+        }
+
+        .bento:hover {
+            border-color: #3f3f46;
+            box-shadow: 0 0 30px rgba(99, 102, 241, 0.06), 0 8px 32px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Glassmorphism header */
+        .glass-header {
+            background: rgba(9, 9, 11, 0.7);
+            backdrop-filter: blur(20px) saturate(1.5);
+            border-bottom: 1px solid rgba(39, 39, 42, 0.5);
+        }
+
+        /* Animations */
+        @keyframes enter {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes countPop {
+            from {
+                transform: scale(0.6);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes barGrow {
+            from {
+                width: 0;
+            }
+        }
+
+        @keyframes shimmer {
+            to {
+                background-position: -200% 0;
+            }
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 4px currentColor;
+            }
+
+            50% {
+                box-shadow: 0 0 16px currentColor;
+            }
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        @keyframes gradientShift {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-10px) rotate(0deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(60px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes fadeTab {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .enter {
+            animation: enter 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease both;
+        }
+
+        .count-pop {
+            animation: countPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
+
+        .timer-bar {
+            transition: width 1s linear;
+        }
+
+        .tab-fade {
+            animation: fadeTab 0.4s ease both;
+        }
+
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #818cf8, #06b6d4, #a78bfa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% 200%;
+            animation: gradientShift 4s ease infinite;
+        }
+
+        /* Live pulse dot */
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #34d399;
+            animation: pulse-glow 2s ease infinite;
+            box-shadow: 0 0 8px #34d399;
+        }
+
+        .live-dot-amber {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #fbbf24;
+            animation: pulse-glow 1.5s ease infinite;
+            box-shadow: 0 0 8px #fbbf24;
+        }
+
+        /* Shimmer skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #18181b 25%, #27272a 50%, #18181b 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s ease infinite;
+            border-radius: var(--radius);
+        }
+
+        /* Pipeline connector */
+        .pipeline-connector {
+            height: 2px;
+            flex: 1;
+            background: linear-gradient(90deg, #3f3f46, #52525b);
+            position: relative;
+            overflow: hidden;
+            border-radius: 1px;
+        }
+
+        .pipeline-connector::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, #818cf8, transparent);
+            animation: dash 2s linear infinite;
+        }
+
+        @keyframes dash {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        /* Smooth accordion */
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+            opacity: 0;
+        }
+
+        .accordion-content.open {
+            max-height: 600px;
+            opacity: 1;
+        }
+
+        /* Circular timer */
+        .timer-ring {
+            transform: rotate(-90deg);
+        }
+
+        .timer-ring circle {
+            transition: stroke-dashoffset 1s linear;
+        }
+
+        /* Typography */
+        .text-display {
+            font-size: 3rem;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.03em;
+            color: #fafafa;
+        }
+
+        .text-heading {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: #fafafa;
+        }
+
+        .text-sub {
+            font-size: 13px;
+            font-weight: 500;
+            color: #71717a;
+        }
+
+        .text-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #52525b;
+        }
+
+        .text-mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+
+        /* Accents */
+        .accent-blue {
+            color: #60a5fa;
+        }
+
+        .accent-violet {
+            color: #a78bfa;
+        }
+
+        .accent-emerald {
+            color: #34d399;
+        }
+
+        .accent-rose {
+            color: #fb7185;
+        }
+
+        .accent-amber {
+            color: #fbbf24;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 8px;
+        }
+
+        /* Button hover glow */
+        .btn-primary {
+            background: #fff;
+            color: #18181b;
+            border: none;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.97);
+        }
+
+        /* Step glow */
+        .step-box {
+            transition: all 0.3s;
+        }
+
+        .step-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.1);
+        }
+
+        /* Quiz option hover */
+        .quiz-option {
+            transition: all 0.2s;
+        }
+
+        .quiz-option:not(:disabled):hover {
+            transform: translateX(4px);
+            border-color: #52525b !important;
+        }
+
+        /* Progress dots */
+        .progress-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        /* Footer */
+        .footer-gradient {
+            background: linear-gradient(to top, rgba(9, 9, 11, 1), transparent);
+        }
+    </style>
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Satoshi', 'system-ui', 'sans-serif'] } } } }
+    </script>
+</head>
+
+<body>
+    <div class="bg-orbs"></div>
+    <div id="root" style="position:relative;z-index:1"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        /* Inline SVG Icon component — no external library, no DOM mutation conflicts */
+        const ICONS = {
+            'git-branch': '<path d="M6 3v12"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
+            'rss': '<path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/>',
+            'shield-check': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
+            'brain': '<path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/>',
+            'sparkles': '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/>',
+            'database': '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/>',
+            'chevron-right': '<path d="m9 18 6-6-6-6"/>',
+            'chevron-down': '<path d="m6 9 6 6 6-6"/>',
+            'layers': '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+            'trending-up': '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
+            'tag': '<path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/>',
+            'terminal': '<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>',
+            'loader': '<line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>',
+            'zap': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+            'search': '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+            'globe': '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+            'film': '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/>',
+            'newspaper': '<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/>',
+            'lightbulb': '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+            'inbox': '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+            'instagram': '<rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>',
+            'help-circle': '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+            'check': '<path d="M20 6 9 17l-5-5"/>',
+            'check-circle': '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+            'x': '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+            'list': '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+            'clock': '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+            'play': '<polygon points="5 3 19 12 5 21 5 3"/>',
+            'history': '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+            'trophy': '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+            'target': '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+            'percent': '<line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+            'share-2': '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>',
+            'rotate-ccw': '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+            'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+            'monitor': '<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
+            'credit-card': '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>',
+            'gamepad-2': '<line x1="6" y1="11" x2="10" y2="11"/><line x1="8" y1="9" x2="8" y2="13"/><line x1="15" y1="12" x2="15.01" y2="12"/><line x1="18" y1="10" x2="18.01" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/>',
+            'puzzle': '<path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.315 8.685a.98.98 0 0 1 .837-.276c.47.07.802.48.968.925a2.501 2.501 0 1 0 3.214-3.214c-.446-.166-.855-.497-.925-.968a.979.979 0 0 1 .276-.837l1.61-1.61a2.404 2.404 0 0 1 1.705-.707c.618 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"/>',
+            'book-open': '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+            'bar-chart-3': '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+        };
+
+        function Icon({ name, size = 18, className = '' }) {
+            const paths = ICONS[name];
+            if (!paths) return <span style={{ width: size, height: size, display: 'inline-block' }} />;
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    className={className} style={{ width: size, height: size, flexShrink: 0 }}
+                    dangerouslySetInnerHTML={{ __html: paths }} />
+            );
+        }
+
+        /* ═══ TAB 1: PIPELINE ═══ */
+        function PipelineDashboard() {
+            const [stats, setStats] = useState(null);
+            const [ps, setPs] = useState({ status: 'idle', logs: [], savedCount: 0, processedCount: 0, totalCount: 0 });
+            const logRef = useRef(null);
+
+
+            useEffect(() => {
+                fetchStats();
+                const i = setInterval(async () => {
+                    try {
+                        const r = await fetch('/api/pipeline-status');
+                        const d = await r.json();
+                        setPs(d);
+                        if (d.status === 'done' || d.status === 'error') fetchStats();
+                    } catch (e) { }
+                }, 3000);
+                return () => clearInterval(i);
+            }, []);
+            useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [ps.logs]);
+            const fetchStats = async () => { try { setStats(await (await fetch('/api/stats')).json()); } catch (e) { } };
+            const trigger = async () => { try { await fetch('/api/trigger', { method: 'POST' }); } catch (e) { } };
+            const isRunning = ps.status === 'running';
+
+            return (
+                <div className="space-y-4 enter">
+                    {/* Pipeline Flow */}
+                    <div className="bento p-6">
+                        <p className="text-label mb-5 flex items-center gap-2">
+                            <Icon name="git-branch" size={14} className="text-zinc-600" /> Pipeline Architecture
+                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                            {[
+                                { icon: 'rss', label: 'Fetch', desc: 'RSS Feeds', color: 'accent-blue', bg: 'bg-blue-500/10' },
+                                { icon: 'shield-check', label: 'Dedup', desc: 'Cache Layer', color: 'accent-amber', bg: 'bg-amber-500/10' },
+                                { icon: 'brain', label: 'AI Filter', desc: 'Gemini 2.5', color: 'accent-violet', bg: 'bg-violet-500/10' },
+                                { icon: 'sparkles', label: 'Generate', desc: 'Content AI', color: 'accent-rose', bg: 'bg-rose-500/10' },
+                                { icon: 'database', label: 'Store', desc: 'PostgreSQL', color: 'accent-emerald', bg: 'bg-emerald-500/10' },
+                            ].map((s, i) => (
+                                <React.Fragment key={i}>
+                                    <div className="flex flex-col items-center text-center flex-1 enter step-box" style={{ animationDelay: `${i * 80}ms` }}>
+                                        <div className={`w-14 h-14 rounded-2xl ${s.bg} border border-zinc-700/30 flex items-center justify-center mb-2.5 ${s.color}`}>
+                                            <Icon name={s.icon} size={24} />
+                                        </div>
+                                        <span className="text-[14px] font-bold text-white">{s.label}</span>
+                                        <span className="text-[12px] text-zinc-600 mt-0.5">{s.desc}</span>
+                                    </div>
+                                    {i < 4 && (
+                                        <div className="pipeline-connector mx-1" style={{ minWidth: 24 }}>
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="bento p-5 enter" style={{ animationDelay: '80ms' }}>
+                            <div className="flex items-center gap-2 mb-3">
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center accent-blue"><Icon name="layers" size={16} /></div>
+                                <span className="text-label">Total</span>
+                            </div>
+                            <p className="text-display">{stats?.totalPosts ?? '–'}</p>
+                            <p className="text-sub mt-1">posts generated</p>
+                        </div>
+                        <div className="bento p-5 enter" style={{ animationDelay: '140ms' }}>
+                            <div className="flex items-center gap-2 mb-3">
+                                <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center accent-violet"><Icon name="trending-up" size={16} /></div>
+                                <span className="text-label">Avg Score</span>
+                            </div>
+                            <p className="text-display">{stats?.avgScore ?? '–'}<span className="text-zinc-600 text-lg font-medium">/10</span></p>
+                            <p className="text-sub mt-1">engagement rating</p>
+                        </div>
+                        <div className="bento p-5 enter" style={{ animationDelay: '200ms' }}>
+                            <div className="flex items-center gap-2 mb-3">
+                                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center accent-emerald"><Icon name="tag" size={16} /></div>
+                                <span className="text-label">Categories</span>
+                            </div>
+                            <div className="space-y-2.5 mt-2">
+                                {stats?.categories?.map((c, i) => (
+                                    <div key={i} className="flex items-center justify-between">
+                                        <span className="text-sub capitalize text-[14px]">{c.name || 'other'}</span>
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-20 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                                <div className="h-full bg-emerald-500/50 rounded-full" style={{ width: `${Math.min((c.count / (stats?.totalPosts || 1)) * 100, 100)}%`, animation: 'barGrow 0.8s ease both' }} />
+                                            </div>
+                                            <span className="text-[14px] font-bold text-white w-5 text-right">{c.count}</span>
+                                        </div>
+                                    </div>
+                                )) || <p className="text-sub">–</p>}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Control Center */}
+                    <div className="bento p-6 enter" style={{ animationDelay: '260ms' }}>
+                        <div className="flex items-center justify-between mb-5">
+                            <div>
+                                <p className="text-[16px] font-bold text-white flex items-center gap-2">
+                                    <Icon name="terminal" size={18} className="text-zinc-500" /> Control Center
+                                </p>
+                                <p className="text-sub mt-1">
+                                    {isRunning ? `Processing ${ps.processedCount}/${ps.totalCount}` : ps.status === 'done' ? `Completed — ${ps.savedCount} saved` : 'Pipeline idle'}
+                                </p>
+                            </div>
+                            <button onClick={trigger} disabled={isRunning}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-bold transition-all ${isRunning ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
+                                    : 'btn-primary'
+                                    }`}>
+                                {isRunning && <span className="live-dot-amber" />}
+                                <Icon name={isRunning ? 'loader' : 'zap'} size={16} className={isRunning ? 'animate-spin' : ''} />
+                                {isRunning ? 'Running...' : 'Run Pipeline'}
+                            </button>
+                        </div>
+                        <div ref={logRef} className="bg-zinc-950/80 rounded-xl p-4 text-mono max-h-56 overflow-y-auto border border-zinc-800/50 backdrop-blur">
+                            {ps.logs.length === 0 ? (
+                                <p className="text-zinc-700 italic text-[13px]">Awaiting pipeline trigger...</p>
+                            ) : ps.logs.map((l, i) => (
+                                <div key={i} className="text-emerald-400/70 py-0.5 slide-in text-[13px]" style={{ animationDelay: `${i * 15}ms` }}>
+                                    <span className="text-zinc-700 mr-2 select-none">{String(i + 1).padStart(2, '0')}</span>{l}
+                                </div>
+                            ))}
+                            {isRunning && <div className="text-amber-400/60 animate-pulse mt-1 text-[13px]">▌ Processing...</div>}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        /* ═══ TAB 2: TRIVIA ═══ */
+        function TriviaEncyclopedia() {
+            const [posts, setPosts] = useState([]);
+            const [filter, setFilter] = useState('all');
+            const [search, setSearch] = useState('');
+            const [loading, setLoading] = useState(true);
+            const debounce = useRef(null);
+
+
+            useEffect(() => { fetchPosts(); }, [filter]);
+
+            const fetchPosts = async (q) => {
+                setLoading(true);
+                try {
+                    const s = q !== undefined ? q : search;
+                    const res = await fetch(`/api/content?category=${filter}${s ? `&search=${encodeURIComponent(s)}` : ''}`);
+                    setPosts(await res.json());
+                } catch (e) { }
+                setLoading(false);
+            };
+            const onSearch = (v) => { setSearch(v); clearTimeout(debounce.current); debounce.current = setTimeout(() => fetchPosts(v), 350); };
+            const top = posts.reduce((b, p) => (!b || p.score > b.score) ? p : b, null);
+
+            return (
+                <div className="space-y-4 enter">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="relative flex-1">
+                            <div className="absolute left-3.5 top-3.5 text-zinc-600"><Icon name="search" size={16} /></div>
+                            <input type="text" value={search} onChange={e => onSearch(e.target.value)}
+                                placeholder="Search trivia, captions, news..."
+                                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-3 text-[14px] text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors" />
+                        </div>
+                        <div className="flex gap-1.5">
+                            {[
+                                { id: 'all', icon: 'globe', label: 'All' },
+                                { id: 'entertainment', icon: 'film', label: 'Entertainment' },
+                                { id: 'current', icon: 'newspaper', label: 'Current' },
+                            ].map(c => (
+                                <button key={c.id} onClick={() => setFilter(c.id)}
+                                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${filter === c.id ? 'bg-zinc-800 text-zinc-100 border border-zinc-700' : 'text-zinc-600 border border-transparent hover:text-zinc-400'
+                                        }`}><Icon name={c.icon} size={14} /> {c.label}</button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <p className="text-sub">{posts.length} facts found</p>
+
+                    {top && top.score >= 7 && !search && (
+                        <div className="bento p-6 border-amber-900/30 enter" style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.03), #18181b)' }}>
+                            <p className="text-label accent-amber flex items-center gap-1.5 mb-2"><Icon name="lightbulb" size={14} className="accent-amber" /> Did You Know?</p>
+                            <p className="text-[16px] text-zinc-200 leading-relaxed font-medium">{top.trivia}</p>
+                            <p className="text-sub mt-3 truncate">— {top.title}</p>
+                        </div>
+                    )}
+
+                    {loading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {[1, 2, 3, 4].map(i => <div key={i} className="skeleton h-40" />)}
+                        </div>
+                    ) : posts.length === 0 ? (
+                        <div className="bento p-14 text-center border-dashed">
+                            <div className="text-zinc-700 mb-3"><Icon name="inbox" size={36} /></div>
+                            <p className="text-sub text-[14px]">{search ? 'No results found.' : 'No content yet. Run the pipeline first.'}</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {posts.map((item, i) => <TriviaCard key={item.id} item={item} i={i} />)}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function TriviaCard({ item, i }) {
+            const [open, setOpen] = useState(false);
+
+            let mcq = null;
+            try { mcq = typeof item.mcq === 'string' ? JSON.parse(item.mcq) : item.mcq; } catch (e) { }
+            const hasMcq = mcq && mcq.question && Array.isArray(mcq.options) && mcq.options.length >= 2;
+            const scoreColor = item.score >= 8 ? 'text-emerald-400 bg-emerald-500/10' : item.score >= 6 ? 'text-amber-400 bg-amber-500/10' : 'text-rose-400 bg-rose-500/10';
+
+            return (
+                <div className="bento overflow-hidden enter" style={{ animationDelay: `${Math.min(i * 40, 200)}ms` }}>
+                    <div className="p-5 cursor-pointer" onClick={() => setOpen(!open)}>
+                        <div className="flex justify-between items-start gap-3 mb-3">
+                            <h3 className="text-[14px] font-bold text-white leading-snug flex-1 line-clamp-2">{item.title || 'Untitled'}</h3>
+                            <span className={`shrink-0 text-[13px] font-bold px-2 py-0.5 rounded-md ${scoreColor}`}>{item.score}</span>
+                        </div>
+                        <div className="bg-zinc-900/60 border border-zinc-800/50 rounded-lg p-3 mb-3">
+                            <p className="text-zinc-400 text-[13px] leading-relaxed italic">{item.trivia || 'No trivia available'}</p>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-label capitalize flex items-center gap-1.5">
+                                <Icon name={item.category === 'entertainment' ? 'film' : 'newspaper'} size={13} className="text-zinc-600" />
+                                {item.category}
+                            </span>
+                            <span className={`text-zinc-600 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+                                <Icon name="chevron-down" size={14} />
+                            </span>
+                        </div>
+                    </div>
+                    {open && (
+                        <div className="border-t border-zinc-800/50 p-5 space-y-4 bg-zinc-950/40 enter">
+                            <div>
+                                <p className="text-label flex items-center gap-1.5 mb-2"><Icon name="instagram" size={13} className="text-zinc-600" /> Caption</p>
+                                <p className="text-zinc-400 text-[13px] whitespace-pre-wrap leading-relaxed">{item.caption || 'N/A'}</p>
+                            </div>
+                            {hasMcq && (
+                                <div>
+                                    <p className="text-label flex items-center gap-1.5 mb-2"><Icon name="help-circle" size={13} className="accent-violet" /> Quiz Question</p>
+                                    <p className="text-zinc-200 text-[14px] font-medium mb-3">{mcq.question}</p>
+                                    <div className="space-y-1.5">
+                                        {mcq.options.map((o, j) => (
+                                            <div key={j} className={`text-[13px] py-2 px-3 rounded-lg border flex items-center gap-2 ${o === mcq.correctAnswer ? 'border-emerald-800/40 bg-emerald-950/20 text-emerald-400' : 'border-zinc-800 text-zinc-500'
+                                                }`}>
+                                                {o === mcq.correctAnswer && <Icon name="check" size={14} className="accent-emerald" />}
+                                                {o}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        /* ═══ TAB 3: QUIZ ═══ */
+        function PlayQuiz() {
+            const [state, setState] = useState('start');
+            const [questions, setQuestions] = useState([]);
+            const [cur, setCur] = useState(0);
+            const [score, setScore] = useState(0);
+            const [sel, setSel] = useState(null);
+            const [timer, setTimer] = useState(30);
+            const [answered, setAnswered] = useState(false);
+            const [totalTime, setTotalTime] = useState(0);
+            const [startTime, setStartTime] = useState(null);
+            const [history, setHistory] = useState(() => { try { return JSON.parse(localStorage.getItem('quizHistory') || '[]'); } catch { return []; } });
+            const timerRef = useRef(null);
+
+
+            const start = async () => {
+                try {
+                    const d = await (await fetch('/api/quiz')).json();
+                    if (d.questions.length === 0) return alert('No quiz questions yet! Run the pipeline first.');
+                    setQuestions(d.questions); setCur(0); setScore(0); setSel(null); setAnswered(false); setTimer(30);
+                    setStartTime(Date.now()); setState('playing');
+                } catch (e) { }
+            };
+
+            useEffect(() => {
+                if (state !== 'playing' || answered) return;
+                timerRef.current = setInterval(() => {
+                    setTimer(p => { if (p <= 1) { clearInterval(timerRef.current); doTimeout(); return 0; } return p - 1; });
+                }, 1000);
+                return () => clearInterval(timerRef.current);
+            }, [state, cur, answered]);
+
+            const doTimeout = () => { setAnswered(true); setSel('__t__'); setTimeout(next, 1500); };
+            const answer = (o) => {
+                if (answered) return;
+                clearInterval(timerRef.current); setSel(o); setAnswered(true);
+                if (o === questions[cur].correctAnswer) setScore(p => p + 1);
+                setTimeout(next, 1500);
+            };
+            const next = () => {
+                if (cur + 1 >= questions.length) {
+                    const t = Math.round((Date.now() - startTime) / 1000);
+                    setTotalTime(t);
+                    const h = [{ date: new Date().toLocaleDateString(), score, total: questions.length, time: t }, ...history].slice(0, 10);
+                    setHistory(h);
+                    try { localStorage.setItem('quizHistory', JSON.stringify(h)); } catch { }
+                    setState('result');
+                } else { setCur(p => p + 1); setSel(null); setAnswered(false); setTimer(30); }
+            };
+            const share = () => {
+                navigator.clipboard.writeText(`AI News Quiz  |  ${score}/${questions.length}  |  ${Math.floor(totalTime / 60)}:${String(totalTime % 60).padStart(2, '0')}`).then(() => alert('Copied to clipboard!'));
+            };
+
+            if (state === 'start') {
+                return (
+                    <div className="enter">
+                        <div className="flex flex-col items-center justify-center py-16 text-center">
+                            <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-6 accent-violet count-pop">
+                                <Icon name="brain" size={30} />
+                            </div>
+                            <h2 className="text-[26px] font-black text-white tracking-tight mb-2">AI News Quiz</h2>
+                            <p className="text-sub text-[15px] max-w-sm mb-8 leading-relaxed">Test your knowledge with AI-generated questions from the latest news</p>
+                            <div className="flex gap-8 text-[14px] text-zinc-500 mb-10">
+                                <span className="flex items-center gap-2"><Icon name="list" size={16} className="accent-blue" /> 5 Questions</span>
+                                <span className="flex items-center gap-2"><Icon name="clock" size={16} className="accent-violet" /> 30s each</span>
+                                <span className="flex items-center gap-2"><Icon name="check-circle" size={16} className="accent-emerald" /> Instant feedback</span>
+                            </div>
+                            <button onClick={start}
+                                className="flex items-center gap-2 px-8 py-3.5 rounded-xl font-bold text-[15px] bg-white text-zinc-900 hover:bg-zinc-200 active:scale-[0.97] transition-all">
+                                <Icon name="play" size={18} /> Start Quiz
+                            </button>
+                        </div>
+                        {history.length > 0 && (
+                            <div className="bento p-5 mt-4">
+                                <p className="text-label mb-4 flex items-center gap-2"><Icon name="history" size={14} className="text-zinc-600" /> Past Attempts</p>
+                                <div className="space-y-2">
+                                    {history.map((h, i) => (
+                                        <div key={i} className="flex justify-between items-center text-[14px] bg-zinc-900/60 rounded-lg px-4 py-3 border border-zinc-800/50">
+                                            <span className="text-zinc-600">{h.date}</span>
+                                            <span className="text-[14px] font-bold text-white">{h.score}/{h.total}</span>
+                                            <span className="text-mono text-zinc-600">{Math.floor(h.time / 60)}:{String(h.time % 60).padStart(2, '0')}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            if (state === 'result') {
+                const pct = Math.round((score / questions.length) * 100);
+                return (
+                    <div className="flex flex-col items-center justify-center py-14 text-center enter">
+                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-5 count-pop ${pct >= 60 ? 'bg-emerald-500/10 accent-emerald' : 'bg-amber-500/10 accent-amber'}`}>
+                            <Icon name={pct >= 60 ? 'trophy' : 'target'} size={28} />
+                        </div>
+                        <p className="text-label text-[13px] mb-5">Quiz Complete</p>
+                        <div className="bento px-12 py-8 mb-7">
+                            <p className="text-display text-[4rem] count-pop">{score}<span className="text-zinc-600 text-2xl">/{questions.length}</span></p>
+                            <div className="flex items-center justify-center gap-5 mt-4 text-[14px] text-zinc-500">
+                                <span className="flex items-center gap-1.5"><Icon name="clock" size={16} className="text-zinc-600" /> {Math.floor(totalTime / 60)}:{String(totalTime % 60).padStart(2, '0')}</span>
+                                <span className="flex items-center gap-1.5"><Icon name="percent" size={16} className="text-zinc-600" /> {pct}% correct</span>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <button onClick={share} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-semibold bento text-zinc-300 hover:border-zinc-600 transition-all">
+                                <Icon name="share-2" size={16} /> Share
+                            </button>
+                            <button onClick={start} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[14px] font-bold bg-white text-zinc-900 hover:bg-zinc-200 active:scale-[0.97] transition-all">
+                                <Icon name="rotate-ccw" size={16} /> Play Again
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            const q = questions[cur];
+            const circumference = 2 * Math.PI * 20;
+            const timerOffset = circumference - (timer / 30) * circumference;
+            return (
+                <div className="max-w-2xl mx-auto enter">
+                    <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-2">
+                            <span className="text-label text-[13px]">Question {cur + 1} of {questions.length}</span>
+                            <div className="flex gap-1.5 ml-2">
+                                {questions.map((_, i) => (
+                                    <div key={i} className={`progress-dot ${i < cur ? 'bg-emerald-500' : i === cur ? 'bg-blue-500 scale-125' : 'bg-zinc-800'}`} />
+                                ))}
+                            </div>
+                        </div>
+                        <div className="relative flex items-center justify-center">
+                            <svg width="48" height="48" className="timer-ring">
+                                <circle cx="24" cy="24" r="20" fill="none" stroke="#27272a" strokeWidth="3" />
+                                <circle cx="24" cy="24" r="20" fill="none" stroke={timer <= 10 ? '#fb7185' : '#60a5fa'} strokeWidth="3"
+                                    strokeDasharray={circumference} strokeDashoffset={timerOffset} strokeLinecap="round" />
+                            </svg>
+                            <span className={`absolute text-[14px] font-bold ${timer <= 10 ? 'accent-rose' : 'accent-blue'}`}>{timer}</span>
+                        </div>
+                    </div>
+                    <div className="w-full bg-zinc-800/50 rounded-full h-1 mb-6">
+                        <div className="bg-blue-500/40 h-1 rounded-full transition-all duration-500" style={{ width: `${((cur + (answered ? 1 : 0)) / questions.length) * 100}%` }} />
+                    </div>
+                    <p className="text-sub text-[12px] uppercase tracking-wider mb-2">{q.category} — {q.newsTitle?.substring(0, 55)}...</p>
+                    <h2 className="text-[18px] font-bold text-white leading-relaxed mb-7">{q.question}</h2>
+                    <div className="space-y-2.5">
+                        {q.options.map((o, i) => {
+                            let cls = 'border-zinc-800 bg-zinc-900/40 text-zinc-200 hover:border-zinc-600 hover:bg-zinc-800/40 cursor-pointer';
+                            if (answered) {
+                                if (o === q.correctAnswer) cls = 'border-emerald-700/50 bg-emerald-950/30 text-emerald-300';
+                                else if (o === sel) cls = 'border-rose-700/50 bg-rose-950/30 text-rose-300';
+                                else cls = 'border-zinc-900 bg-zinc-950/50 text-zinc-700';
+                            }
+                            return (
+                                <button key={i} onClick={() => answer(o)} disabled={answered}
+                                    className={`w-full text-left p-4 rounded-xl border text-[14px] font-medium flex items-center gap-3 quiz-option ${cls}`}>
+                                    <span className="w-7 h-7 rounded-lg bg-zinc-800/50 flex items-center justify-center shrink-0 text-[13px] font-bold text-zinc-500">{String.fromCharCode(65 + i)}</span>
+                                    <span className="flex-1">{o}</span>
+                                    {answered && o === q.correctAnswer && <Icon name="check" size={18} className="accent-emerald" />}
+                                    {answered && o === sel && o !== q.correctAnswer && <Icon name="x" size={18} className="accent-rose" />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <p className="text-center mt-6 text-[14px] text-zinc-500">Score: <span className="text-white font-bold">{score}</span>/{questions.length}</p>
+                </div>
+            );
+        }
+
+
+        /* ═══ MAIN APP ═══ */
+        function App() {
+            const [tab, setTab] = useState('dashboard');
+
+            const tabs = [
+                { id: 'dashboard', icon: 'zap', label: 'Pipeline' },
+                { id: 'trivia', icon: 'book-open', label: 'Trivia' },
+                { id: 'quiz', icon: 'gamepad-2', label: 'Quiz' },
+            ];
+
+            return (
+                <div className="min-h-screen">
+                    <header className="glass-header sticky top-0 z-50">
+                        <div className="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                                    <span className="text-white font-black text-[13px]">AI</span>
+                                </div>
+                                <div>
+                                    <h1 className="text-[17px] font-bold text-white leading-none">Content Pipeline</h1>
+                                    <p className="text-[12px] text-zinc-500 mt-0.5">News to Instagram & Trivia</p>
+                                </div>
+                            </div>
+                            <nav className="flex gap-px bg-zinc-900/80 rounded-xl p-1 border border-zinc-800/50 backdrop-blur">
+                                {tabs.map(t => (
+                                    <button key={t.id} onClick={() => setTab(t.id)}
+                                        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold transition-all ${tab === t.id ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-600 hover:text-zinc-400'
+                                            }`}>
+                                        <Icon name={t.icon} size={15} />
+                                        <span className="hidden sm:inline">{t.label}</span>
+                                    </button>
+                                ))}
+                            </nav>
+                        </div>
+                    </header>
+                    <main className="max-w-5xl mx-auto px-5 py-6 tab-fade" key={tab}>
+                        {tab === 'dashboard' && <PipelineDashboard />}
+                        {tab === 'trivia' && <TriviaEncyclopedia />}
+                        {tab === 'quiz' && <PlayQuiz />}
+                    </main>
+                    <footer className="border-t border-zinc-800/30 mt-12 py-6">
+                        <div className="max-w-5xl mx-auto px-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <p className="text-[12px] text-zinc-600">Built with Gemini AI, React & PostgreSQL</p>
+                            <div className="flex items-center gap-4 text-[12px] text-zinc-700">
+                                <span className="flex items-center gap-1.5"><Icon name="zap" size={12} className="accent-amber" /> Auto-runs every 3 hours</span>
+                                <span className="flex items-center gap-1.5"><Icon name="database" size={12} className="accent-emerald" /> Prisma ORM</span>
+                            </div>
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+
+</html>
