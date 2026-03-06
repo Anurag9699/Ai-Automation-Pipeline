@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Satoshi:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
@@ -497,6 +498,11 @@
             'puzzle': '<path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.315 8.685a.98.98 0 0 1 .837-.276c.47.07.802.48.968.925a2.501 2.501 0 1 0 3.214-3.214c-.446-.166-.855-.497-.925-.968a.979.979 0 0 1 .276-.837l1.61-1.61a2.404 2.404 0 0 1 1.705-.707c.618 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"/>',
             'book-open': '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
             'bar-chart-3': '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+            'flame': '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+            'leaf': '<path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
+            'heart-pulse': '<path d="M19.5 12.572l-7.5 7.428l-7.5-7.428A5 5 0 0 1 7.5 5c1.54 0 3.04.5 4.5 2c1.46-1.5 2.96-2 4.5-2a5 5 0 0 1 2.5 9.572Z"/><path d="M5 12h2l2-3 3 6 2-3h2"/>',
+            'compass': '<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>',
+            'microscope': '<path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/>',
         };
 
         function Icon({ name, size = 18, className = '' }) {
@@ -672,15 +678,23 @@
                                 placeholder="Search trivia, captions, news..."
                                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-3 text-[14px] text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors" />
                         </div>
-                        <div className="flex gap-1.5">
+                        <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
                             {[
                                 { id: 'all', icon: 'globe', label: 'All' },
+                                { id: 'trending', icon: 'flame', label: 'Trending' },
                                 { id: 'entertainment', icon: 'film', label: 'Entertainment' },
-                                { id: 'current', icon: 'newspaper', label: 'Current' },
+                                { id: 'sports', icon: 'trophy', label: 'Sports' },
+                                { id: 'controversy', icon: 'zap', label: 'Controversy' },
+                                { id: 'science', icon: 'microscope', label: 'Science' },
+                                { id: 'history', icon: 'history', label: 'History' },
+                                { id: 'animals', icon: 'leaf', label: 'Animals' },
+                                { id: 'technology', icon: 'monitor', label: 'Tech & AI' },
+                                { id: 'geography', icon: 'compass', label: 'Geography' },
+                                { id: 'health', icon: 'heart-pulse', label: 'Health' },
                             ].map(c => (
                                 <button key={c.id} onClick={() => setFilter(c.id)}
-                                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${filter === c.id ? 'bg-zinc-800 text-zinc-100 border border-zinc-700' : 'text-zinc-600 border border-transparent hover:text-zinc-400'
-                                        }`}><Icon name={c.icon} size={14} /> {c.label}</button>
+                                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold transition-all whitespace-nowrap shrink-0 ${filter === c.id ? 'bg-zinc-800 text-zinc-100 border border-zinc-700' : 'text-zinc-600 border border-transparent hover:text-zinc-400'
+                                        }`}><Icon name={c.icon} size={13} /> {c.label}</button>
                             ))}
                         </div>
                     </div>
@@ -690,7 +704,7 @@
                     {top && top.score >= 7 && !search && (
                         <div className="bento p-6 border-amber-900/30 enter" style={{ background: 'linear-gradient(135deg, rgba(251,191,36,0.03), #18181b)' }}>
                             <p className="text-label accent-amber flex items-center gap-1.5 mb-2"><Icon name="lightbulb" size={14} className="accent-amber" /> Did You Know?</p>
-                            <p className="text-[16px] text-zinc-200 leading-relaxed font-medium">{top.trivia}</p>
+                            <div className="text-[16px] text-zinc-200 leading-relaxed font-medium [&_strong]:text-amber-400 [&_em]:text-amber-200/80" dangerouslySetInnerHTML={{ __html: typeof marked !== 'undefined' ? marked.parseInline(top.trivia) : top.trivia }} />
                             <p className="text-sub mt-3 truncate">— {top.title}</p>
                         </div>
                     )}
@@ -725,15 +739,21 @@
                 <div className="bento overflow-hidden enter" style={{ animationDelay: `${Math.min(i * 40, 200)}ms` }}>
                     <div className="p-5 cursor-pointer" onClick={() => setOpen(!open)}>
                         <div className="flex justify-between items-start gap-3 mb-3">
-                            <h3 className="text-[14px] font-bold text-white leading-snug flex-1 line-clamp-2">{item.title || 'Untitled'}</h3>
+                            <h3 className="text-[14px] font-bold text-white leading-snug flex-1 line-clamp-2">{item.headline || item.title || 'Untitled'}</h3>
                             <span className={`shrink-0 text-[13px] font-bold px-2 py-0.5 rounded-md ${scoreColor}`}>{item.score}</span>
                         </div>
                         <div className="bg-zinc-900/60 border border-zinc-800/50 rounded-lg p-3 mb-3">
-                            <p className="text-zinc-400 text-[13px] leading-relaxed italic">{item.trivia || 'No trivia available'}</p>
+                            <div className="text-zinc-400 text-[13px] leading-relaxed italic [&_strong]:text-zinc-300 [&_strong]:not-italic" dangerouslySetInnerHTML={{ __html: typeof marked !== 'undefined' ? marked.parseInline(item.trivia || 'No trivia available') : (item.trivia || 'No trivia available') }} />
                         </div>
+                        {item.headline && item.title && <p className="text-zinc-600 text-[11px] truncate mb-2">— {item.title}</p>}
                         <div className="flex justify-between items-center">
                             <span className="text-label capitalize flex items-center gap-1.5">
-                                <Icon name={item.category === 'entertainment' ? 'film' : 'newspaper'} size={13} className="text-zinc-600" />
+                                <Icon name={{
+                                    trending: 'flame', entertainment: 'film', sports: 'trophy',
+                                    controversy: 'zap', science: 'microscope', history: 'history',
+                                    animals: 'leaf', technology: 'monitor', geography: 'compass',
+                                    health: 'heart-pulse'
+                                }[item.category] || 'newspaper'} size={13} className="text-zinc-600" />
                                 {item.category}
                             </span>
                             <span className={`text-zinc-600 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
@@ -745,7 +765,7 @@
                         <div className="border-t border-zinc-800/50 p-5 space-y-4 bg-zinc-950/40 enter">
                             <div>
                                 <p className="text-label flex items-center gap-1.5 mb-2"><Icon name="instagram" size={13} className="text-zinc-600" /> Caption</p>
-                                <p className="text-zinc-400 text-[13px] whitespace-pre-wrap leading-relaxed">{item.caption || 'N/A'}</p>
+                                <div className="text-zinc-400 text-[13px] whitespace-pre-wrap leading-relaxed [&_strong]:text-zinc-300" dangerouslySetInnerHTML={{ __html: typeof marked !== 'undefined' ? marked.parseInline(item.caption || 'N/A') : (item.caption || 'N/A') }} />
                             </div>
                             {hasMcq && (
                                 <div>

@@ -39,7 +39,7 @@ export const runPipeline = async () => {
 
     try {
         // 1. Fetch News (limit to 5 for demo)
-        const rawNews = (await fetchNewsFromFeeds()).slice(0, 5);
+        const rawNews = (await fetchNewsFromFeeds()).slice(0, 10);
         pipelineState.totalCount = rawNews.length;
         log(`📡 Fetched ${rawNews.length} news items from RSS feeds`);
 
@@ -106,7 +106,8 @@ export const runPipeline = async () => {
                 const savedContent = await prisma.newsContent.create({
                     data: {
                         title: news.title,
-                        category: evaluation.category || 'other',
+                        headline: generated.headline || '',
+                        category: evaluation.category || 'trending',
                         caption: generated.caption + '\n\n' + (generated.hashtags || []).map(h => `#${h.replace('#', '')}`).join(' '),
                         trivia: generated.trivia,
                         mcq: hasValidMcq ? generated.mcq : {},

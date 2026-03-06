@@ -10,6 +10,7 @@ datasource db {
 model NewsContent {
   id        String   @id @default(uuid())
   title     String
+  headline  String   @default("")
   category  String
   caption   String
   trivia    String
