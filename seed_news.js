@@ -89,64 +89,33 @@ function extractImageFromRSS(item) {
 // ─── Scrape og:image from article source page ───────────────────
 async function scrapeOgImage(url) {
     try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
-
         const res = await fetch(url, {
-            signal: controller.signal,
             headers: {
-                'User-Agent': 'Mozilla/5.0 (compatible; IWTKBot/1.0)',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
                 'Accept': 'text/html',
-            },
-            redirect: 'follow',
+            }
         });
-        clearTimeout(timeout);
 
         if (!res.ok) return null;
 
-        // Read only the first 50KB to find the og:image tag (it's always in <head>)
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let html = '';
-        let bytesRead = 0;
-        const MAX_BYTES = 50 * 1024;
+        const text = await res.text();
+        const head = text.substring(0, 100000);
 
-        while (bytesRead < MAX_BYTES) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            html += decoder.decode(value, { stream: true });
-            bytesRead += value.length;
-            // Stop early if we've passed </head>
-            if (html.includes('</head>')) break;
-        }
-        reader.cancel();
+        const ogMatch = head.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+            || head.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
 
-        // Match og:image meta tag
-        const ogMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-            || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-
-        if (ogMatch && ogMatch[1]) {
-            const imgUrl = ogMatch[1];
-            // Basic validation — must look like an image URL
-            if (imgUrl.startsWith('http') && /\.(jpg|jpeg|png|webp|gif)/i.test(imgUrl)) {
-                return imgUrl;
-            }
-            // Some og:image URLs don't have extensions but are still valid
-            if (imgUrl.startsWith('http')) {
-                return imgUrl;
-            }
+        if (ogMatch && ogMatch[1] && ogMatch[1].startsWith('http')) {
+            return ogMatch[1];
         }
 
-        // Also try twitter:image
-        const twMatch = html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
-            || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i);
+        const twMatch = head.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
+            || head.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i);
         if (twMatch && twMatch[1] && twMatch[1].startsWith('http')) {
             return twMatch[1];
         }
 
         return null;
     } catch (e) {
-        // Timeout, network error, etc. — just skip
         return null;
     }
 }
@@ -168,14 +137,13 @@ function getUniqueUnsplashUrl(title) {
         .toLowerCase()
         .replace(/[^a-z0-9\s]/g, '')
         .split(/\s+/)
-        .filter(w => w.length > 2 && !STOP_WORDS.has(w));
+        .filter(w => w.length > 3 && !STOP_WORDS.has(w));
 
-    // Take the top 3 most meaningful keywords
-    const keywords = words.slice(0, 3).join(',');
-    const fallbackKeywords = keywords || 'news,world';
+    // Take the top 2 most meaningful keywords
+    const keywords = (words.slice(0, 2).join(',') || 'news,world').replace(/,/g, ' ');
 
-    // Use Unsplash Source API — Higher resolution for sharp modal view
-    return `https://source.unsplash.com/1600x900/?${encodeURIComponent(fallbackKeywords)}`;
+    // Switched to LoremFlickr as source.unsplash.com is deprecated
+    return `https://loremflickr.com/1600/900/${encodeURIComponent(keywords)}`;
 }
 
 // ─── Category Detector ───────────────────────────────────────────

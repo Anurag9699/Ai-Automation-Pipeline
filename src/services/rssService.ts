@@ -87,47 +87,36 @@ function extractImage(item: any): string | undefined {
 async function scrapeOgImage(url: string): Promise<string | undefined> {
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
 
         const res = await fetch(url, {
             signal: controller.signal,
             headers: {
-                'User-Agent': 'Mozilla/5.0 (compatible; IWTKBot/1.0)',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
                 'Accept': 'text/html',
-            },
-            redirect: 'follow',
-        });
-        clearTimeout(timeout);
+            }
+        } as any);
+
+        clearTimeout(timeoutId);
 
         if (!res.ok) return undefined;
 
-        // Read only the first 50KB to find og:image in <head>
-        const reader = (res.body as any)?.getReader();
-        if (!reader) return undefined;
-        const decoder = new TextDecoder();
-        let html = '';
-        let bytesRead = 0;
-        const MAX_BYTES = 50 * 1024;
+        // Get the first 100KB of the page - usually enough for <head>
+        const text = await res.text();
+        const head = text.substring(0, 100000);
 
-        while (bytesRead < MAX_BYTES) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            html += decoder.decode(value, { stream: true });
-            bytesRead += value.length;
-            if (html.includes('</head>')) break;
-        }
-        reader.cancel();
-
-        const ogMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-            || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+        const ogMatch = head.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+            || head.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+        
         if (ogMatch?.[1]?.startsWith('http')) return ogMatch[1];
 
-        const twMatch = html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
-            || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i);
+        const twMatch = head.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
+            || head.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i);
+        
         if (twMatch?.[1]?.startsWith('http')) return twMatch[1];
 
         return undefined;
-    } catch {
+    } catch (e) {
         return undefined;
     }
 }
@@ -144,17 +133,16 @@ const STOP_WORDS = new Set([
 ]);
 
 export function getContextualImage(title: string): string {
-    // Extract meaningful keywords from title for a unique Unsplash query
     const words = title
         .toLowerCase()
         .replace(/[^a-z0-9\s]/g, '')
         .split(/\s+/)
-        .filter(w => w.length > 2 && !STOP_WORDS.has(w));
+        .filter(w => w.length > 3 && !STOP_WORDS.has(w));
 
-    const keywords = words.slice(0, 3).join(',');
-    const fallbackKeywords = keywords || 'news,world';
+    const keywords = (words.slice(0, 2).join(',') || 'news,world').replace(/,/g, ' ');
 
-    return `https://source.unsplash.com/1600x900/?${encodeURIComponent(fallbackKeywords)}`;
+    // Switched to LoremFlickr as source.unsplash.com is deprecated
+    return `https://loremflickr.com/1600/900/${encodeURIComponent(keywords)}`;
 }
 
 
