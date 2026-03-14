@@ -29,12 +29,19 @@ export const evaluateNews = async (news: ParsedNewsItem): Promise<AIMetadata | n
     try {
         const prompt = `
 You are a content strategist for a viral facts & trivia page.
-Rate this news from 1-10 for Instagram engagement potential.
+Rate this news from 1-10 for Instagram engagement potential. A story is highly interesting (high score) if it scores high on at least 1 of these signals:
+1. Surprise: Contradicts common assumptions (e.g. turns out X has an Indian connection).
+2. Novelty: First time something has happened, or a record broken.
+3. Emotion: Triggers awe, outrage, delight, curiosity, or is wholesome.
+4. Shareability: "You won't believe this", "Things you didn't know", or "Funfact" type quality that makes people want to tell someone.
+5. India connection: An unexpected connection of a global/international news item that has an Indian connection.
+6. Explainer: For a currently trending topic, finding an origin story or explainer about where it originated from.
+
 Return ONLY a valid JSON object with the following structure. Do not wrap it in markdown blocks (like \`\`\`json):
 {
  "score": number, // 1-10
  "category": "trending" | "entertainment" | "sports" | "controversy" | "science" | "history" | "animals" | "technology" | "geography" | "health",
- "reason": "short reason why it got this score"
+ "reason": "Short reason explaining which signals (Surprise, Novelty, India connection, etc.) it matched and why it got this score"
 }
 
 Category Guide:
@@ -93,37 +100,19 @@ Return ONLY a valid JSON object with the following structure. Do not wrap it in 
   }
 }
 
-TRIVIA FRAMEWORKS (You MUST frame the "trivia" field using one of these hooks if applicable):
-1. Counterintuitive: Facts that break expectations (e.g., "Cleopatra lived closer to the Moon landing than the pyramids").
-2. Little-known facts: Deeply hidden facts about well-known names.
-3. Origin stories: Rabbit hole discoveries about how things started (e.g., "Word originates from...").
-4. Superlatives: "Only/First/Last" facts. These perform extremely well.
-5. Local-to-global: Something small that has huge implications.
-6. Historical coincidences: Two completely unrelated events happening at the exact same time.
-7. Myth-busters: Debunking something widely believed.
-8. Word Origins/Etymology: Stories of how new words or phrases were coined.
-9. Animal behavior surprises: E.g., Octopus intelligence, complex ant colonies.
-10. Comparison/Scale facts: Makes abstract numbers tangible (e.g., "If you removed all empty space from atoms, all humans fit in a sugar cube").
+TRIVIA FRAMEWORKS (You MUST frame the "trivia" field using one of these hooks if applicable. A story is interesting if it uses at least 1 of these signals):
+1. Surprise: Contradicts common assumptions ("turns out X is wrong", or turns out that X has an Indian connection - e.g. Ayatollah Khomeini from Iran died, he has a half brother in UP).
+2. Novelty: First time something has happened, or a record broken.
+3. Emotion: Triggers awe, outrage, delight, or curiosity OR wholesome.
+4. Shareability: "You won't believe this", "Things you didn't know", "Did you know", or "Funfact" type quality — makes people want to tell someone.
+5. India connection: An unexpected connection of a global or international news item that has an Indian connection. (e.g. Ayatollah Khomeini has a brother in Lucknow from UP in India).
+6. Explainer: For a currently trending topic like a World Cup or global event, find an origin story or an explainer about where it originated from.
 
-DOMAIN-SPECIFIC RULES (If the news is about Movies or Sports, YOU MUST look for these specific angles):
-**MOVIES/ENTERTAINMENT:**
-- Look for: "Based on", "Inspired by", "Characters based on", or plagiarized ideas.
-- Inspirations behind costumes, character looks, or the marketing of the film.
-- Unusual Box Office Records or Legacy/Influence in Pop Culture (Crossovers).
-- Interview insights from screenwriters/directors or crazy Cameo appearances.
-- Controversies or insane Production facts.
-
-**SPORTS (Cricket, Football, Olympics):**
-- Unusual records, unusual achievements, or bizarre events on the field.
-- Mascots of World Cups, or origins of Football Club names/Jerseys.
-- "First time in XX years", or players/stadiums "named after...".
-- Olympics: Unusual or discontinued sports, highly controversial moments, "First Woman" or "First Indian" to do X.
-
-Choose the framework or domain rule that best fits the source to create the most mind-blowing trivia possible.
+Choose the framework or signal that best fits the source to create the most mind-blowing trivia possible.
 
 IMPORTANT RULES for headline:
-- Must be attention-grabbing and make the user highly curious.
-- Examples: "🤯 The Hidden Inspiration Behind Bollywood's Most Famous Look", "This Bizarre Olympic Sport Was Banned Forever"
+- Must be attention-grabbing and hit one of the signals (Surprise, Emotion, Shareability).
+- Examples: "🤯 You Won't Believe This Indian Connection", "This Bizarre Record Was Just Broken Forever"
 
 News Title: ${news.title}
 News Description: ${news.description}
