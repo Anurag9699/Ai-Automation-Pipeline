@@ -66,10 +66,19 @@ export const runPipeline = async () => {
 
                 // ── AI Evaluation (7-Signal Scoring) ──
                 log(`🤖 Evaluating: "${news.title.substring(0, 60)}..."`);
-                const evaluation = await evaluateNews(news);
+                let evaluation;
+                try {
+                    evaluation = await evaluateNews(news);
+                } catch (e: any) {
+                    log(`❌ Evaluation failed for: ${news.title.substring(0, 50)}... (${e.message})`);
+                    console.error(e);
+                    await markAsProcessed(news.link); // Mark as processed even if evaluation fails
+                    continue;
+                }
 
                 if (!evaluation || !evaluation.signalScores) {
-                    log(`❌ Evaluation failed for: ${news.title.substring(0, 50)}...`);
+                    log(`❌ Evaluation returned no valid signals for: ${news.title.substring(0, 50)}...`);
+                    await markAsProcessed(news.link);
                     continue;
                 }
 
