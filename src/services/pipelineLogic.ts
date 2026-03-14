@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import { fetchNewsFromFeeds } from './rssService';
-import { evaluateNews, generateContent } from './aiService';
+import { fetchNewsFromFeeds, getContextualImage } from './rssService';
+import { evaluateNews, generateContent, passesThreshold, getPrimarySignal, computeOverallScore } from './aiService';
 import { isDuplicate, markAsProcessed } from './redisService';
 
 const prisma = new PrismaClient();
@@ -18,12 +18,10 @@ export const pipelineState = {
 function log(msg: string) {
     console.log(msg);
     pipelineState.logs.push(msg);
-    // Keep only last 50 logs
     if (pipelineState.logs.length > 50) pipelineState.logs.shift();
 }
 
 export const runPipeline = async () => {
-    // Prevent multiple simultaneous runs
     if (pipelineState.status === 'running') {
         log('⚠️ Pipeline already running, skipping...');
         return;
@@ -35,10 +33,9 @@ export const runPipeline = async () => {
     pipelineState.savedCount = 0;
     pipelineState.processedCount = 0;
 
-    log('🚀 Starting AI Automation Pipeline...');
+    log('🚀 Starting IWTK Pipeline (7-Signal Scoring)...');
 
     try {
-        // 1. Fetch News (limit to 5 for demo)
         const rawNews = (await fetchNewsFromFeeds()).slice(0, 10);
         pipelineState.totalCount = rawNews.length;
         log(`📡 Fetched ${rawNews.length} news items from RSS feeds`);
@@ -47,11 +44,11 @@ export const runPipeline = async () => {
             try {
                 pipelineState.processedCount++;
 
-                // Delay to respect Gemini Free Tier rate limit
+                // Rate limit cooldown for Gemini free tier
                 log(`⏳ Rate limit cooldown before item ${pipelineState.processedCount}/${rawNews.length}...`);
                 await new Promise(r => setTimeout(r, 13000));
 
-                // 2. Duplicate Detection
+                // ── Duplicate Detection ──
                 if (await isDuplicate(news.link)) {
                     log(`⏭️ Skipping duplicate: ${news.title.substring(0, 50)}...`);
                     continue;
@@ -67,26 +64,31 @@ export const runPipeline = async () => {
                     continue;
                 }
 
-                // 3. AI Rating & Filtering
+                // ── AI Evaluation (7-Signal Scoring) ──
                 log(`🤖 Evaluating: "${news.title.substring(0, 60)}..."`);
                 const evaluation = await evaluateNews(news);
 
-                if (!evaluation) {
+                if (!evaluation || !evaluation.signalScores) {
                     log(`❌ Evaluation failed for: ${news.title.substring(0, 50)}...`);
                     continue;
                 }
 
-                if (evaluation.score <= 5) {
-                    log(`🚫 Rejected (Score ${evaluation.score}/10): ${evaluation.reason?.substring(0, 60) || 'Low engagement'}`);
+                // ── Threshold Check (Mentor Spec) ──
+                if (!passesThreshold(evaluation.signalScores)) {
+                    const scores = evaluation.signalScores;
+                    const topScore = Math.max(...Object.values(scores));
+                    log(`🚫 Rejected (top signal: ${topScore}/3): ${evaluation.reason?.substring(0, 60) || 'Low interestingness'}`);
                     await markAsProcessed(news.link);
                     continue;
                 }
 
-                log(`✅ Accepted (Score ${evaluation.score}/10)! Generating content...`);
+                const overallScore = computeOverallScore(evaluation.signalScores);
+                const primarySignal = getPrimarySignal(evaluation.signalScores);
+                log(`✅ Accepted! ${primarySignal} (Score ${overallScore}/10). Generating content...`);
 
-                // 4. Generate Content
+                // ── Content Generation (with category-specific prompts) ──
                 await new Promise(r => setTimeout(r, 13000));
-                const generated = await generateContent(news);
+                const generated = await generateContent(news, evaluation.category);
 
                 if (!generated) {
                     log(`❌ Content generation failed`);
@@ -100,24 +102,25 @@ export const runPipeline = async () => {
                     continue;
                 }
 
-                const hasValidMcq = generated.mcq && generated.mcq.question && Array.isArray(generated.mcq.options) && generated.mcq.options.length >= 2;
-
-                // 5. Store in Database
+                // ── Save to Database ──
                 const savedContent = await prisma.newsContent.create({
                     data: {
                         title: news.title,
                         headline: generated.headline || '',
+                        hookSentence: generated.hookSentence || '',
                         category: evaluation.category || 'trending',
                         caption: generated.caption + '\n\n' + (generated.hashtags || []).map(h => `#${h.replace('#', '')}`).join(' '),
-                        trivia: generated.trivia,
-                        mcq: hasValidMcq ? generated.mcq : {},
-                        score: evaluation.score,
+                        trivia: Array.isArray(generated.trivia) ? JSON.stringify(generated.trivia) : JSON.stringify([generated.trivia]),
+                        score: overallScore,
+                        signalScores: evaluation.signalScores as any,
+                        signalBadge: generated.signalBadge || primarySignal,
+                        imageUrl: news.imageUrl || getContextualImage(news.title),
                         sourceUrl: news.link
                     }
                 });
 
                 pipelineState.savedCount++;
-                log(`💾 Saved! "${news.title.substring(0, 50)}..." (ID: ${savedContent.id.substring(0, 8)}...)`);
+                log(`💾 Saved! ${primarySignal} "${news.title.substring(0, 50)}..." (ID: ${savedContent.id.substring(0, 8)}...)`);
 
                 await markAsProcessed(news.link);
 

@@ -14,22 +14,55 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 const PORT = process.env.PORT || 3000;
 const prisma = new PrismaClient();
 
-// ─── API: Fetch all generated content (with optional category filter + search) ───
+// ─── Helper: Time Window to Date ───
+function getDateFromWindow(window: string): Date {
+    const now = new Date();
+    switch (window) {
+        case 'today': return new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        case 'week': return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        case 'month': return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        case 'quarter': return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        case 'year': return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        default: return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
+}
+
+// ─── API: Fetch all generated content (with filters) ───
 app.get('/api/content', async (req, res) => {
     try {
         const category = req.query.category as string | undefined;
         const search = req.query.search as string | undefined;
+        const timeWindow = req.query.timeWindow as string | undefined;
+        const signal = req.query.signal as string | undefined;
+
         const where: any = { title: { not: '' } };
+
+        // Category filter
         if (category && category !== 'all') {
-            where.category = category;
+            where.category = { equals: category, mode: 'insensitive' };
         }
+
+        // Time window filter
+        if (timeWindow && timeWindow !== 'all') {
+            where.createdAt = { gte: getDateFromWindow(timeWindow) };
+        }
+
+        // Signal badge filter
+        if (signal && signal !== 'all') {
+            where.signalBadge = { contains: signal, mode: 'insensitive' };
+        }
+
+        // Search filter
         if (search) {
             where.OR = [
                 { title: { contains: search, mode: 'insensitive' } },
                 { trivia: { contains: search, mode: 'insensitive' } },
                 { caption: { contains: search, mode: 'insensitive' } },
+                { headline: { contains: search, mode: 'insensitive' } },
+                { hookSentence: { contains: search, mode: 'insensitive' } },
             ];
         }
+
         const contents = await prisma.newsContent.findMany({
             where,
             orderBy: { createdAt: 'desc' },
@@ -55,10 +88,16 @@ app.get('/api/stats', async (req, res) => {
             _count: { id: true },
             where: { title: { not: '' } }
         });
+        const signals = await prisma.newsContent.groupBy({
+            by: ['signalBadge'],
+            _count: { id: true },
+            where: { title: { not: '' }, signalBadge: { not: '' } }
+        });
         res.json({
             totalPosts: total,
             avgScore: Math.round((avgScore._avg.score || 0) * 10) / 10,
-            categories: categories.map(c => ({ name: c.category, count: c._count.id }))
+            categories: categories.map(c => ({ name: c.category, count: c._count.id })),
+            signals: signals.map(s => ({ name: s.signalBadge, count: s._count.id }))
         });
     } catch (error: any) {
         res.status(500).json({ error: 'Failed to fetch stats' });
@@ -77,33 +116,6 @@ app.get('/api/pipeline-status', (req, res) => {
     });
 });
 
-// ─── API: Get random quiz questions ───
-app.get('/api/quiz', async (req, res) => {
-    try {
-        const allWithMcq = await prisma.newsContent.findMany({
-            where: { title: { not: '' } },
-            select: { id: true, title: true, mcq: true, category: true }
-        });
-        const validQuestions = allWithMcq.filter((item: any) => {
-            const mcq = item.mcq as any;
-            return mcq && mcq.question && Array.isArray(mcq.options) && mcq.options.length >= 2 && mcq.correctAnswer;
-        });
-        const shuffled = validQuestions.sort(() => Math.random() - 0.5);
-        const selected = shuffled.slice(0, Math.min(5, shuffled.length));
-        const questions = selected.map((item: any) => ({
-            id: item.id,
-            newsTitle: item.title,
-            category: item.category,
-            question: (item.mcq as any).question,
-            options: (item.mcq as any).options,
-            correctAnswer: (item.mcq as any).correctAnswer
-        }));
-        res.json({ totalAvailable: validQuestions.length, questions });
-    } catch (error: any) {
-        res.status(500).json({ error: 'Failed to fetch quiz' });
-    }
-});
-
 // ─── API: Trigger the pipeline (non-blocking) ───
 app.post('/api/trigger', async (req, res) => {
     if (pipelineState.status === 'running') {
@@ -115,12 +127,12 @@ app.post('/api/trigger', async (req, res) => {
 
 // ─── Cron Job ───
 cron.schedule('0 */3 * * *', async () => {
-    console.log('Cron triggered: Running AI Automation Pipeline...');
+    console.log('Cron triggered: Running IWTK Pipeline...');
     try { await runPipeline(); } catch (error) { console.error('Cron job failed:', error); }
 });
 
 app.listen(Number(PORT), '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`IWTK Server running on port ${PORT}`);
     console.log(`Cron job scheduled (every 3 hours).`);
 });
 

@@ -32,6 +32,7 @@
     "node-cron": "^4.2.1",
     "openai": "^6.25.0",
     "prisma": "^5.22.0",
+    "puppeteer": "^24.39.1",
     "rss-parser": "^3.13.0"
   },
   "devDependencies": {

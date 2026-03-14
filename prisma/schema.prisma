@@ -8,14 +8,17 @@ datasource db {
 }
 
 model NewsContent {
-  id        String   @id @default(uuid())
-  title     String
-  headline  String   @default("")
-  category  String
-  caption   String
-  trivia    String
-  mcq       Json
-  score     Int
-  sourceUrl String   @unique
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  title        String
+  headline     String   @default("")
+  category     String
+  caption      String
+  hookSentence String   @default("")
+  trivia       String
+  score        Int
+  signalScores Json     @default("{}")
+  signalBadge  String   @default("")
+  imageUrl     String   @default("")
+  sourceUrl    String   @unique
+  createdAt    DateTime @default(now())
 }

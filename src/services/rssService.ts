@@ -1,60 +1,199 @@
 import Parser from 'rss-parser';
 
-const parser = new Parser();
+// ─── Helper: Clean RSS Boilerplate ───
+function cleanRSSContent(text: string): string {
+    if (!text) return '';
+    return text
+        .replace(/Get our breaking news email, free app or daily news podcast/gi, '')
+        .replace(/Follow us on (Twitter|Facebook|Instagram|LinkedIn)/gi, '')
+        .replace(/Read more\.\.\./gi, '')
+        .replace(/Continue reading\.\.\./gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+const parser = new Parser({
+    headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    },
+    customFields: {
+        item: [
+            ['media:content', 'mediaContent', { keepArray: true }],
+            ['media:thumbnail', 'mediaThumbnail', { keepArray: true }],
+        ]
+    }
+});
 
 export interface ParsedNewsItem {
     title: string;
     link: string;
     description: string;
     pubDate: string;
+    imageUrl?: string;
 }
 
+
+function extractImage(item: any): string | undefined {
+    let url = undefined;
+    
+    // 1. media:content (Pick largest)
+    if (item.mediaContent) {
+        const contents = Array.isArray(item.mediaContent) ? item.mediaContent : [item.mediaContent];
+        let maxW = 0;
+        let best = undefined;
+        for (const c of contents) {
+            const attr = c.$ || {};
+            const w = parseInt(attr.width || 0);
+            if (attr.url && w >= maxW) {
+                maxW = w;
+                best = attr.url;
+            }
+        }
+        if (best) url = best;
+    }
+
+    // 2. media:thumbnail (Pick largest if no content)
+    if (!url && item.mediaThumbnail) {
+        const thumbs = Array.isArray(item.mediaThumbnail) ? item.mediaThumbnail : [item.mediaThumbnail];
+        let maxW = 0;
+        let best = undefined;
+        for (const t of thumbs) {
+            const attr = t.$ || {};
+            const w = parseInt(attr.width || 0);
+            if (attr.url && w >= maxW) {
+                maxW = w;
+                best = attr.url;
+            }
+        }
+        if (best) url = best;
+    }
+
+    // 3. enclosure (Fallback if still no url)
+    if (!url && item.enclosure && item.enclosure.url && item.enclosure.type && item.enclosure.type.startsWith('image/')) {
+        url = item.enclosure.url;
+    }
+    
+    // 4. Final Fallback: Parse <img> tag from content or description
+    if (!url) {
+        const contentToSearch = item.content || item.contentSnippet || item.description || '';
+        const imgMatch = contentToSearch.match(/<img[^>]+src=["']([^"']+)["']/i);
+        if (imgMatch && imgMatch[1]) url = imgMatch[1];
+    }
+    
+    return url;
+}
+
+// ─── Scrape og:image from article source page ──────────────────────
+async function scrapeOgImage(url: string): Promise<string | undefined> {
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+
+        const res = await fetch(url, {
+            signal: controller.signal,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; IWTKBot/1.0)',
+                'Accept': 'text/html',
+            },
+            redirect: 'follow',
+        });
+        clearTimeout(timeout);
+
+        if (!res.ok) return undefined;
+
+        // Read only the first 50KB to find og:image in <head>
+        const reader = (res.body as any)?.getReader();
+        if (!reader) return undefined;
+        const decoder = new TextDecoder();
+        let html = '';
+        let bytesRead = 0;
+        const MAX_BYTES = 50 * 1024;
+
+        while (bytesRead < MAX_BYTES) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            html += decoder.decode(value, { stream: true });
+            bytesRead += value.length;
+            if (html.includes('</head>')) break;
+        }
+        reader.cancel();
+
+        const ogMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+            || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+        if (ogMatch?.[1]?.startsWith('http')) return ogMatch[1];
+
+        const twMatch = html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
+            || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i);
+        if (twMatch?.[1]?.startsWith('http')) return twMatch[1];
+
+        return undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+// ─── Unique Unsplash fallback using article-specific keywords ───────
+const STOP_WORDS = new Set([
+    'the','a','an','and','or','but','in','on','at','to','for','of','with',
+    'by','from','is','was','are','were','be','been','has','have','had','it',
+    'its','his','her','their','this','that','just','not','as','up','out',
+    'after','if','over','into','than','then','when','there','who','what',
+    'how','about','new','says','amid','shows','report','reports','could',
+    'would','should','will','can','may','might','do','does','did','been',
+    'being','no','yes','so','also','more','most','very','much','many',
+]);
+
+export function getContextualImage(title: string): string {
+    // Extract meaningful keywords from title for a unique Unsplash query
+    const words = title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 2 && !STOP_WORDS.has(w));
+
+    const keywords = words.slice(0, 3).join(',');
+    const fallbackKeywords = keywords || 'news,world';
+
+    return `https://source.unsplash.com/1600x900/?${encodeURIComponent(fallbackKeywords)}`;
+}
+
+
 const RSS_FEEDS = [
-    // 1. Reddit Communities (High Signal Trivia)
+    // ─── Reddit Gold-Standard Sources (Mentor: "r/todayilearned is gold-standard") ───
     'https://www.reddit.com/r/todayilearned/top/.rss?t=day',
+    'https://www.reddit.com/r/interestingasfuck/top/.rss?t=day',
     'https://www.reddit.com/r/science/top/.rss?t=day',
     'https://www.reddit.com/r/worldnews/top/.rss?t=day',
     'https://www.reddit.com/r/movies/top/.rss?t=day',
     'https://www.reddit.com/r/Cricket/top/.rss?t=day',
+    'https://www.reddit.com/r/india/top/.rss?t=day',
+    'https://www.reddit.com/r/bollywood/top/.rss?t=day',
+    'https://www.reddit.com/r/history/top/.rss?t=day',
+    'https://www.reddit.com/r/etymology/top/.rss?t=week',
 
-    // 2. High-Quality Tech & Science
+    // ─── Science & Space ───
     'https://www.nasa.gov/rss/dyn/breaking_news.rss',
-    'https://hnrss.org/frontpage', // Hacker News
+    'https://hnrss.org/frontpage',
     'https://www.wired.com/feed/rss',
-    'https://www.technologyreview.com/feed/', // MIT Tech Review
+    'https://www.technologyreview.com/feed/',
 
-    // 3. Niche Trivia & History
-    'https://www.cracked.com/rss.xml',
+    // ─── Trivia & History ───
     'https://allthatsinteresting.com/feed',
-    'https://www.nosuchthingasafish.com/feed/podcast',
     'https://www.theguardian.com/world/rss',
 
-    // 4. Sports Direct Feeds
+    // ─── Sports ───
     'https://www.espncricinfo.com/rss/content/story/feeds/0.xml',
 
-    // 5. Google News Search (Simulating sites without clean feeds)
-    // Wikipedia & Fact Checking
+    // ─── Google News Searches (category-specific) ───
     'https://news.google.com/rss/search?q=site:wikipedia.org+"on+this+day"',
-    'https://news.google.com/rss/search?q=site:snopes.com',
-
-    // Movies & Entertainment 
     'https://news.google.com/rss/search?q=site:screenrant.com+origins+OR+easter+eggs',
     'https://news.google.com/rss/search?q=site:imdb.com+trivia',
-    'https://news.google.com/rss/search?q=site:indiewire.com+interview+inspiration',
-    'https://news.google.com/rss/search?q=site:subslikescript.com',
     'https://news.google.com/rss/search?q=site:buzzfeed.com+trivia+OR+facts',
-    'https://news.google.com/rss/search?q=site:scoopwhoop.com+movies+facts',
-
-    // Substacks & Newsletters
-    'https://news.google.com/rss/search?q=site:substack.com+"india+wants+to+know"+OR+" trivia"',
-    'https://news.google.com/rss/search?q=site:nowiknow.com',
-
-    // 6. Broad Category Fallbacks (Movies, Sports, Trending)
     'https://news.google.com/rss/search?q=film+marketing+controversy+cameo',
-    'https://news.google.com/rss/search?q=olympics+unusual+records+discontinued',
-    'https://news.google.com/rss/search?q=football+club+origin+jersey+history',
-    'https://news.google.com/rss/search?q=cricket+mascot+world+cup+first+time',
     'https://news.google.com/rss/search?q=etymology+word+origin+coined',
+    'https://news.google.com/rss/search?q=olympics+unusual+records+discontinued',
+    'https://news.google.com/rss/search?q="India+connection"+OR+"Indian+origin"+interesting',
+    'https://news.google.com/rss/search?q="did+you+know"+OR+"things+you+did\'t+know"',
 ];
 
 export const fetchNewsFromFeeds = async (): Promise<ParsedNewsItem[]> => {
@@ -63,21 +202,26 @@ export const fetchNewsFromFeeds = async (): Promise<ParsedNewsItem[]> => {
     for (const feedUrl of RSS_FEEDS) {
         try {
             const feed = await parser.parseURL(feedUrl);
-            feed.items.forEach(item => {
+            for (const item of feed.items) {
                 if (item.title && item.link) {
+                    // Try RSS image first, then OG image scraping
+                    let imageUrl = extractImage(item);
+                    if (!imageUrl) {
+                        imageUrl = await scrapeOgImage(item.link);
+                    }
                     allNews.push({
                         title: item.title,
                         link: item.link,
-                        description: item.contentSnippet || item.content || '',
-                        pubDate: item.pubDate || new Date().toISOString()
+                        description: cleanRSSContent(item.contentSnippet || item.content || ''),
+                        pubDate: item.pubDate || new Date().toISOString(),
+                        imageUrl
                     });
                 }
-            });
+            }
         } catch (error) {
             console.error(`Error fetching RSS feed ${feedUrl}:`, error);
         }
     }
 
-    // Sort by pubDate descending (newest first)
     return allNews.sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime());
 };
