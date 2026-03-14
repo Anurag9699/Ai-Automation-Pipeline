@@ -146,50 +146,46 @@ export function getContextualImage(title: string): string {
 }
 
 
-const RSS_FEEDS = [
-    // ─── Reddit Gold-Standard Sources (Mentor: "r/todayilearned is gold-standard") ───
-    'https://www.reddit.com/r/todayilearned/top/.rss?t=day',
-    'https://www.reddit.com/r/interestingasfuck/top/.rss?t=day',
-    'https://www.reddit.com/r/science/top/.rss?t=day',
-    'https://www.reddit.com/r/worldnews/top/.rss?t=day',
-    'https://www.reddit.com/r/movies/top/.rss?t=day',
-    'https://www.reddit.com/r/Cricket/top/.rss?t=day',
-    'https://www.reddit.com/r/india/top/.rss?t=day',
-    'https://www.reddit.com/r/bollywood/top/.rss?t=day',
-    'https://www.reddit.com/r/history/top/.rss?t=day',
-    'https://www.reddit.com/r/etymology/top/.rss?t=week',
-
-    // ─── Science & Space ───
-    'https://www.nasa.gov/rss/dyn/breaking_news.rss',
-    'https://hnrss.org/frontpage',
-    'https://www.wired.com/feed/rss',
-    'https://www.technologyreview.com/feed/',
-
-    // ─── Trivia & History ───
-    'https://allthatsinteresting.com/feed',
+export const RSS_FEEDS = [
+    // World & Tech
     'https://www.theguardian.com/world/rss',
-
-    // ─── Sports ───
+    'https://www.wired.com/feed/rss',
+    'https://techcrunch.com/feed/',
+    'https://www.theverge.com/rss/index.xml',
+    // Science & Health
+    'https://www.nasa.gov/news-release/feed/',
+    'https://www.sciencedaily.com/rss/top/science.xml',
+    'https://www.who.int/rss-feeds/news-english.xml',
+    // Sports
     'https://www.espncricinfo.com/rss/content/story/feeds/0.xml',
-
-    // ─── Google News Searches (category-specific) ───
-    'https://news.google.com/rss/search?q=site:wikipedia.org+"on+this+day"',
-    'https://news.google.com/rss/search?q=site:screenrant.com+origins+OR+easter+eggs',
-    'https://news.google.com/rss/search?q=site:imdb.com+trivia',
-    'https://news.google.com/rss/search?q=site:buzzfeed.com+trivia+OR+facts',
-    'https://news.google.com/rss/search?q=film+marketing+controversy+cameo',
-    'https://news.google.com/rss/search?q=etymology+word+origin+coined',
-    'https://news.google.com/rss/search?q=olympics+unusual+records+discontinued',
-    'https://news.google.com/rss/search?q="India+connection"+OR+"Indian+origin"+interesting',
-    'https://news.google.com/rss/search?q="did+you+know"+OR+"things+you+did\'t+know"',
+    'https://www.skysports.com/rss/12040', // Football
+    // Entertainment & Culture
+    'https://allthatsinteresting.com/feed',
+    'https://variety.com/feed/',
 ];
+
+// Helper function to fetch a URL with a strict timeout
+async function fetchWithTimeout(url: string, timeoutMs: number = 10000) {
+    return new Promise<any>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`Timeout fetching ${url}`)), timeoutMs);
+        parser.parseURL(url)
+            .then(res => {
+                clearTimeout(timer);
+                resolve(res);
+            })
+            .catch(err => {
+                clearTimeout(timer);
+                reject(err);
+            });
+    });
+}
 
 export const fetchNewsFromFeeds = async (): Promise<ParsedNewsItem[]> => {
     const allNews: ParsedNewsItem[] = [];
 
     for (const feedUrl of RSS_FEEDS) {
         try {
-            const feed = await parser.parseURL(feedUrl);
+            const feed = await fetchWithTimeout(feedUrl, 10000);
             for (const item of feed.items) {
                 if (item.title && item.link) {
                     // Try RSS image first, then OG image scraping
