@@ -9,6 +9,6 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: GEMINI_API_KEY
-        sync: false
+        value: "AIzaSyCJ80Rr2SK0y_ioFK8vV1FSHCltaEIh918"
       - key: NODE_ENV
         value: production
