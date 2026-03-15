@@ -15,3 +15,17 @@ dist/
 
 # OS
 .DS_Store
+
+# Temporary dev scripts and debug files
+*.log
+import.sql
+generate_sql.js
+sync.js
+sync-render.js
+fix*.js
+regenerate*.js
+test_*.js
+test_*.ts
+verify_*.ts
+seed_real_images.ts
+puppeteer_test.js

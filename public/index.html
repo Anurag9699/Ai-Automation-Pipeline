@@ -941,40 +941,48 @@
             gap: 1rem;
         }
 
-        .modal-trivia-list li {
-            position: relative;
-            padding: 1.25rem 1.25rem 1.25rem 3rem;
+        /* ─── DETAIL TRIVIA ITEMS (modal + card shared) ─── */
+        .detail-trivia-item {
+            display: flex;
+            gap: 0.8rem;
+            align-items: flex-start;
+            padding: 1.25rem;
             border-radius: 12px;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-bottom: 0.75rem;
             transition: all 0.3s ease;
-            margin-bottom: 0;
         }
+        .detail-trivia-item:last-child { margin-bottom: 0; }
 
-        .modal-trivia-list li::before {
-            content: '✦';
-            position: absolute;
-            left: 1rem;
-            top: 1.25rem;
+        .trivia-bullet {
             font-size: 1.2rem;
             line-height: 1;
+            flex-shrink: 0;
+            margin-top: 0.1rem;
+        }
+        .detail-trivia-item p {
+            margin: 0;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.05rem;
+            line-height: 1.6;
         }
 
-        /* 5 Distinct Highlights for the 5 Facts */
-        .modal-trivia-list li:nth-child(1) { border-left: 4px solid var(--accent-amber); background: linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.02) 100%); }
-        .modal-trivia-list li:nth-child(1)::before { color: var(--accent-amber); text-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
+        /* 5 Distinct Color Accents for the 5 Facts */
+        .detail-trivia-item:nth-child(1) { border-left: 4px solid var(--accent-amber); background: linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.02) 100%); }
+        .detail-trivia-item:nth-child(1) .trivia-bullet { color: var(--accent-amber); text-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
 
-        .modal-trivia-list li:nth-child(2) { border-left: 4px solid var(--accent-blue); background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.02) 100%); }
-        .modal-trivia-list li:nth-child(2)::before { color: var(--accent-blue); text-shadow: 0 0 8px rgba(59, 130, 246, 0.5); }
+        .detail-trivia-item:nth-child(2) { border-left: 4px solid var(--accent-blue); background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.02) 100%); }
+        .detail-trivia-item:nth-child(2) .trivia-bullet { color: var(--accent-blue); text-shadow: 0 0 8px rgba(59, 130, 246, 0.5); }
 
-        .modal-trivia-list li:nth-child(3) { border-left: 4px solid var(--accent-green); background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%); }
-        .modal-trivia-list li:nth-child(3)::before { color: var(--accent-green); text-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+        .detail-trivia-item:nth-child(3) { border-left: 4px solid var(--accent-green); background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%); }
+        .detail-trivia-item:nth-child(3) .trivia-bullet { color: var(--accent-green); text-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
 
-        .modal-trivia-list li:nth-child(4) { border-left: 4px solid var(--accent-purple); background: linear-gradient(90deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.02) 100%); }
-        .modal-trivia-list li:nth-child(4)::before { color: var(--accent-purple); text-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+        .detail-trivia-item:nth-child(4) { border-left: 4px solid var(--accent-purple); background: linear-gradient(90deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.02) 100%); }
+        .detail-trivia-item:nth-child(4) .trivia-bullet { color: var(--accent-purple); text-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
 
-        .modal-trivia-list li:nth-child(5) { border-left: 4px solid var(--accent-pink); background: linear-gradient(90deg, rgba(236, 72, 153, 0.1) 0%, rgba(236, 72, 153, 0.02) 100%); }
-        .modal-trivia-list li:nth-child(5)::before { color: var(--accent-pink); text-shadow: 0 0 8px rgba(236, 72, 153, 0.5); }
+        .detail-trivia-item:nth-child(5) { border-left: 4px solid var(--accent-pink); background: linear-gradient(90deg, rgba(236, 72, 153, 0.1) 0%, rgba(236, 72, 153, 0.02) 100%); }
+        .detail-trivia-item:nth-child(5) .trivia-bullet { color: var(--accent-pink); text-shadow: 0 0 8px rgba(236, 72, 153, 0.5); }
 
         @keyframes fadeIn {
             from {
@@ -1375,11 +1383,12 @@
             let triviaArr = [];
             try { triviaArr = JSON.parse(item.trivia); } catch (e) { triviaArr = [item.trivia]; }
 
-            if (Array.isArray(triviaArr) && triviaArr.length > 1) {
-                document.getElementById('mTrivia').innerHTML = `<strong class="modal-trivia-title">💡 Fascinating Facts:</strong><ul class="modal-trivia-list">${triviaArr.map(t => `<li>${t}</li>`).join('')}</ul>`;
-            } else {
-                document.getElementById('mTrivia').innerHTML = `<strong class="modal-trivia-title">💡 The Fact:</strong><br/>${item.trivia}`;
-            }
+            const triviaItems = triviaArr.map(t => `
+                <div class="detail-trivia-item">
+                    <span class="trivia-bullet">✦</span>
+                    <p>${t}</p>
+                </div>`).join('');
+            document.getElementById('mTrivia').innerHTML = `<strong class="modal-trivia-title">💡 Fascinating Facts:</strong>${triviaItems}`;
             document.getElementById('detailModal').classList.add('show');
             document.body.style.overflow = 'hidden'; // prevent background scrolling
         }
