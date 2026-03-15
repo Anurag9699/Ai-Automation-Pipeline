@@ -65,10 +65,7 @@ app.get('/api/content', async (req, res) => {
 
         const contents = await prisma.newsContent.findMany({
             where,
-            orderBy: [
-                { score: 'desc' },      // Highest quality facts first
-                { createdAt: 'desc' }   // Tiebreaker: newest first
-            ],
+            orderBy: { createdAt: 'desc' },  // Newest first
             take: 50
         });
         res.json(contents);
