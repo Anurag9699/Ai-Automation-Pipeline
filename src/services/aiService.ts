@@ -82,23 +82,28 @@ export function computeOverallScore(scores: SignalScores): number {
 function getCategoryPromptChunk(category: string): string {
     const chunks: Record<string, string> = {
         entertainment: `
-DOMAIN-SPECIFIC RULES (ENTERTAINMENT/MOVIES):
-Look specifically for these angles:
-- Origin: Based on / inspired by / adapted from — book, real person, true story
-- Characters: Real-world inspirations for fictional characters
-- Inspiration: Costumes, looks, visual styles inspired by something else
-- Plagiarism / Controversy: Inspired by or accused of copying another film
-- Cameos: Hidden or famous cameo appearances
-- Marketing: Unusual campaigns, guerrilla marketing, collabs, billboards, installations
-- Records: Box office, production, first-of-its-kind achievements
-- Legacy: Impact on pop culture, influence on later films or society
-- Crossover: Unexpected connections between franchises or genres
-- Production: Behind-the-scenes oddities, accidents, improvised scenes
-- Easter Eggs: Hidden references embedded in the film`,
+DOMAIN: ENTERTAINMENT — Bollywood & Hollywood (Celebrities, Shows, Albums)
+ANGLES TO LOOK FOR:
+- Origin: How a celebrity got their break / was discovered / almost wasn't cast
+- Alter ego / Real name: Stage names, name changes, hidden identities
+- Rivalries & feuds: Behind-the-scenes fallouts that shaped careers or projects
+- Unexpected collaborations: Two stars working together nobody expected
+- Crossover: Bollywood actor in Hollywood, or vice versa
+- India connection: International celebrity with Indian roots, training, or influence
+- Inspiration: A song/album/show inspired by a real event or person
+- Records: Highest-paid, most-streamed, fastest to X ever
+- Controversies: Plagiarism, ghostwriting, lip-sync scandals
+- Legacy: A show/song that permanently changed culture
+- Casting almost-was: Famous roles that almost went to someone else
+
+KEYWORD PATTERNS TO SEARCH:
+"[Celebrity] real name" | "[Celebrity] almost cast in" | "[Show] based on true story"
+"[Celebrity] Indian connection" | "[Song] plagiarism accusation" | "[Film] originally cast"
+"[Award show] scandal" | "Bollywood inspired by Hollywood" | "[Indian film] remake of"`,
 
         music: `
-DOMAIN-SPECIFIC RULES (MUSIC):
-Look specifically for these angles:
+DOMAIN: MUSIC
+ANGLES TO LOOK FOR:
 - Song origin: What real event, person, or emotion inspired the song
 - Hidden meaning: Lyrics that mean something different from what people think
 - Samples: Famous songs built on a sample nobody knew about
@@ -108,11 +113,140 @@ Look specifically for these angles:
 - Banned / Censored: Songs banned by governments or platforms
 - One-take / accident: Famous recordings made by accident or in one take
 - Feuds: Songs written as a direct response to another artist
-- Legacy: A song that changed the music industry`,
+- Legacy: A song that changed the music industry
+- Etymology: Where music terms come from (e.g. where did "jazz" come from?)
+
+KEYWORD PATTERNS TO SEARCH:
+"[Song] inspired by" | "[Song] sample origin" | "[Artist] ghostwritten by" | "[Song] banned in"
+"[Song] hidden meaning" | "[Artist] record first" | "[Artist] India connection"
+"[Song] plagiarism lawsuit" | "[Genre] origin history" | "[Instrument] invented by"`,
+
+        science: `
+DOMAIN: SCIENCE & SPACE
+ANGLES TO LOOK FOR:
+- Discovery origin: How the discovery was made — especially if accidental
+- Named after: Who or what something is named after, and why
+- India connection: Indian scientist behind a global discovery; named after an Indian
+- Counterintuitive: A scientific fact that contradicts what most people believe
+- Record: Largest, smallest, hottest, coldest, fastest ever measured
+- First: First time something was observed, measured, or achieved in space
+- Controversy: Credit disputes, stolen discoveries, suppressed findings
+- Origin of a concept: Where a fundamental idea (gravity, DNA, atom) actually came from
+- Animal inspiration: Breakthrough inspired by an animal's biology
+- Failed experiment that worked: Discoveries from accidents or failures
+- India's first: First Indian in space, first Indian satellite, etc.
+
+KEYWORD PATTERNS TO SEARCH:
+"[Discovery] discovered by accident" | "[Concept] named after" | "[Scientific term] origin"
+"[Discovery] Indian scientist" | "India's first [space/science achievement]"
+"[Discovery] credit dispute" | "[Space mission] failed but" | "[Topic] debunked"`,
+
+        history: `
+DOMAIN: HISTORY & "TODAY IN HISTORY"
+ANGLES TO LOOK FOR:
+- Historical coincidence: Two unrelated events that happened on the same date
+- Counterfactual: How one small decision changed everything
+- Forgotten figure: The person who ACTUALLY did something, not the famous one
+- India connection: An international historical event with an Indian link
+- Origin story: Where a modern institution, tradition, or law actually came from
+- Myth-buster: A famous historical "fact" that is actually wrong
+- Today in history: Significant event on today's date
+- Named after: Something everyone uses, named after a real person (eponyms)
+- Parallel: A modern event that mirrors something from history exactly
+- Hidden history: Something deliberately erased or forgotten from textbooks
+- Odd laws / customs: Strange historical rules that once existed
+
+KEYWORD PATTERNS TO SEARCH:
+"[Date] today in history" | "[Historical figure] forgotten" | "[Event] India connection"
+"[Modern thing] origin history" | "[Famous fact] debunked" | "first time in history [phenomenon]"
+"[Country] hidden history" | "[Event] parallel to today" | "[Historical event] untold story"`,
+
+        animals: `
+DOMAIN: ANIMALS & NATURE
+ANGLES TO LOOK FOR:
+- Counterintuitive biology: Animals that do something you'd never expect
+- Extreme records: Loudest, fastest, oldest, deadliest, strangest
+- India connection: Animal species discovered in India, or iconic to India
+- Human-animal story: Extraordinary bond or interaction between humans and animals
+- New species discovered: Recently identified species, especially in India
+- Named after: Species named after famous people (including Indians)
+- Conservation story: An animal that came back from the brink
+- Animal inspiration: Technology or medicine inspired by animal biology
+- Myth-buster: Common animal "facts" that are wrong
+- Origin of animal names: Why we call them what we call them
+- Strange behaviour: Animals doing things that seem almost human
+- Extinction story: An animal we lost, and the story behind it
+
+KEYWORD PATTERNS TO SEARCH:
+"[Animal] can actually" | "[Animal] world record" | "[Animal] named after"
+"new species discovered India" | "[Animal] inspired invention" | "[Animal] myth debunked"
+"[Animal] almost extinct" | "[Animal] India connection" | "oldest living [animal]"`,
+
+        technology: `
+DOMAIN: TECHNOLOGY & AI
+ANGLES TO LOOK FOR:
+- Origin story: How a now-ubiquitous technology was actually invented
+- Accidental invention: Tech that was discovered by mistake
+- Named after: Products, formats, or technologies named after people/places (bluetooth, pixel, spam)
+- India connection: Indian inventor or institution behind a global technology
+- India's first: First Indian app, chip, satellite, AI model
+- Abandoned / forgotten tech: Technology that existed but was killed
+- Controversy: Patent disputes, stolen credit, Big Tech scandals
+- AI milestone: First time AI did something considered "impossible"
+- Unintended consequence: A technology built for X that changed Y entirely
+- Prediction that came true: Old sci-fi or forecast that turned out accurate
+- Etymology: Where tech terms come from (bluetooth, pixel, bug, spam, podcast)
+
+KEYWORD PATTERNS TO SEARCH:
+"[Technology] invented by accident" | "[Tech term] origin of word" | "[Technology] named after"
+"[Tech] Indian inventor" | "India's first [technology]" | "[Company] founded by Indian"
+"[Technology] killed by [company]" | "[AI milestone] first ever" | "[Sci-fi prediction] came true"`,
+
+        geography: `
+DOMAIN: GEOGRAPHY & WORLD RECORDS
+ANGLES TO LOOK FOR:
+- Counterintuitive geography: Facts that contradict mental maps
+- Name origin: Where a country, city, or place name actually comes from
+- India connection: A global geographical record held by an Indian place
+- Border stories: Strange borders, enclaves, disputed territories
+- Record: Largest, smallest, highest, deepest, hottest, oldest
+- Only place in the world: Something that only exists in one specific location
+- Hidden geography: Places that most people don't know exist
+- Changed over time: Countries that used to exist, borders that moved
+- Named after: Places named after people, animals, or events
+- India's geography superlatives: India's highest, largest, first, only
+- Natural wonder explanation: The science behind a stunning natural phenomenon
+
+KEYWORD PATTERNS TO SEARCH:
+"[Country/City] name origin" | "[Country] world record" | "India's largest / highest / only"
+"only place in the world [phenomenon]" | "[Country] strange law" | "[Border] disputed territory story"
+"[Country] used to be called" | "[Natural wonder] how it formed"`,
+
+        health: `
+DOMAIN: HEALTH & BODY
+ANGLES TO LOOK FOR:
+- Counterintuitive health fact: Something we do daily with a surprising effect
+- Body record: Extreme human biological achievements
+- Myth-buster: Common health advice that is actually wrong
+- India connection: Ayurvedic origin of a practice now mainstream globally
+- Discovery origin: How a major medical breakthrough was actually found
+- Named after: Diseases, syndromes named after people
+- Accidental cure: A treatment discovered by mistake
+- Ancient vs. modern: A modern practice with ancient origins
+- Strange condition: Rare medical conditions that sound fictional
+- Psychology quirk: Cognitive biases most people experience
+- Placebo / nocebo: Cases where belief literally changed physical outcomes
+- Drug origin story: Where a common medicine actually came from
+
+KEYWORD PATTERNS TO SEARCH:
+"[Health belief] myth debunked" | "[Disease] named after" | "[Drug] discovered by accident"
+"[Health practice] Indian origin" | "Ayurveda origin [modern practice]"
+"[Body part / function] counterintuitive fact" | "World record human body"
+"[Condition] rarest in the world" | "[Common medicine] originally used for"`,
 
         sports: `
-DOMAIN-SPECIFIC RULES (SPORTS):
-Look specifically for these angles:
+DOMAIN: SPORTS & ACHIEVEMENTS
+ANGLES TO LOOK FOR:
 - Record broken: Any world, national, or tournament record — especially unexpected
 - Origin story: How a sport, tournament, or tradition actually started
 - India connection: An international sporting record with an Indian link
@@ -121,87 +255,76 @@ Look specifically for these angles:
 - Rivalry backstory: The real story behind a famous rivalry
 - Rule origin: Why a sport has a strange or counterintuitive rule
 - Almost moment: Famous near-misses or almost-champions
+- Controversy: Match-fixing, doping, eligibility scandals
 - Named after: Trophies, stadiums, tournaments named after people
 - Physics / science of sport: The counterintuitive science behind a famous move
-- Non-obvious champion: A country or person dominating a sport you'd never expect`,
+- Non-obvious champion: A country or person dominating a sport you'd never expect
 
-        science: `
-DOMAIN-SPECIFIC RULES (SCIENCE & SPACE):
-Look specifically for these angles:
-- Discovery origin: How the discovery was made — especially if accidental
-- Named after: Who or what something is named after, and why
-- India connection: Indian scientist behind a global discovery; named after an Indian
-- Counterintuitive: A scientific fact that contradicts what most people believe
-- Record: Largest, smallest, hottest, coldest, fastest ever measured
-- First: First time something was observed, measured, or achieved
-- Failed experiment that worked: Discoveries from accidents or failures
-- Animal inspiration: Breakthrough inspired by an animal's biology
-- India's first: First Indian satellite, space mission, etc.`,
+KEYWORD PATTERNS TO SEARCH:
+"[Sport] origin history" | "[Rule] why does [sport] have" | "[Tournament] named after"
+"[Player] world record" | "first Indian to [achievement]" | "India [sport] forgotten champion"
+"[Match] controversy scandal" | "[Country] surprising sport world champion"
+"[Trophy/Stadium] named after" | "[Sport] physics science behind"`,
 
-        history: `
-DOMAIN-SPECIFIC RULES (HISTORY):
-Look specifically for these angles:
-- Historical coincidence: Two unrelated events that happened on the same date
-- Counterfactual: How one small decision changed everything
-- Forgotten figure: The person who actually did something, not the famous one
-- India connection: An international historical event with an Indian link
-- Origin story: Where a modern institution, tradition, or law actually came from
-- Myth-buster: A famous historical "fact" that is actually wrong
-- Named after: Something everyone uses, named after a real person (eponyms)
-- Hidden history: Something deliberately erased or forgotten from textbooks
-- Parallel: A modern event that mirrors something from history exactly`,
+        trending: `
+DOMAIN: CONTROVERSIES, VIRAL NEWS & SCANDALS
+ANGLES TO LOOK FOR:
+- The twist: A viral story where the real truth was different from the viral narrative
+- Unlikely villain / hero: Someone cast as one who turned out to be the other
+- India connection: An international scandal with an unexpected Indian link
+- Origin of the controversy: How a minor incident escalated into a global story
+- Corporate scandal: A business behaving badly in a surprising way
+- Cover-up revealed: A conspiracy that turned out to be true
+- Cancelled then vindicated: Someone cancelled who was later proved right or innocent
+- The forgotten one: The person or detail in a scandal that everyone forgot
+- Parallel controversy: A current scandal that mirrors a historical one
+- Whistleblower story: The person who exposed something, and what happened to them
+- The aftermath: Where are they now — the surprising post-scandal story
 
-        animals: `
-DOMAIN-SPECIFIC RULES (ANIMALS & NATURE):
-Look specifically for these angles:
-- Counterintuitive biology: Animals that do something you'd never expect
-- Extreme records: Loudest, fastest, oldest, deadliest, strangest
-- India connection: Animal species discovered in India, or iconic to India
-- New species discovered: Recently identified species
-- Named after: Species named after famous people (including Indians)
-- Conservation story: An animal that came back from the brink
-- Animal inspiration: Technology or medicine inspired by animal biology
-- Myth-buster: Common animal "facts" that are wrong
-- Strange behaviour: Animals doing things that seem almost human`,
+KEYWORD PATTERNS TO SEARCH:
+"[Scandal] real truth" | "[Viral story] debunked" | "[Controversy] India connection"
+"[Scandal] whistleblower" | "[Person] cancelled but innocent" | "[Event] cover-up revealed"
+"[Controversy] origin how it started" | "[Person] vindicated after"
+"[Viral news] what really happened" | "[Corporate scandal] India link"`,
 
-        technology: `
-DOMAIN-SPECIFIC RULES (TECHNOLOGY & AI):
-Look specifically for these angles:
-- Origin story: How a now-ubiquitous technology was actually invented
-- Accidental invention: Tech that was discovered by mistake
-- Named after: Products named after people/places (bluetooth, pixel, spam)
-- India connection: Indian inventor or institution behind a global technology
-- India's first: First Indian app, chip, satellite, AI model
-- Abandoned / forgotten tech: Technology that existed but was killed
-- AI milestone: First time AI did something considered "impossible"
-- Unintended consequence: A technology built for X that changed Y entirely
-- Prediction that came true: Old sci-fi or forecast that turned out accurate`,
+        controversy: `
+DOMAIN: CONTROVERSIES, VIRAL NEWS & SCANDALS  
+ANGLES TO LOOK FOR:
+- The twist: A viral story where the real truth was different from the viral narrative
+- Unlikely villain / hero: Someone cast as one who turned out to be the other
+- India connection: An international scandal with an unexpected Indian link
+- Origin of the controversy: How a minor incident escalated into a global story
+- Corporate scandal: A business behaving badly in a surprising way
+- Cover-up revealed: A conspiracy that turned out to be true
+- Cancelled then vindicated: Someone cancelled who was later proved right or innocent
+- Whistleblower story: The person who exposed something, and what happened to them
 
-        geography: `
-DOMAIN-SPECIFIC RULES (GEOGRAPHY & WORLD RECORDS):
-Look specifically for these angles:
-- Counterintuitive geography: Facts that contradict mental maps
-- Name origin: Where a country, city, or place name actually comes from
-- India connection: A global geographical record held by an Indian place
-- Border stories: Strange borders, enclaves, disputed territories
-- Only place in the world: Something that only exists in one specific location
-- Hidden geography: Places that most people don't know exist
-- Changed over time: Countries that used to exist, borders that moved`,
-
-        health: `
-DOMAIN-SPECIFIC RULES (HEALTH & BODY):
-Look specifically for these angles:
-- Counterintuitive health fact: Something we do daily with a surprising effect
-- Myth-buster: Common health advice that is actually wrong
-- India connection: Ayurvedic origin of a practice now mainstream globally
-- Discovery origin: How a major medical breakthrough was found
-- Named after: Diseases, syndromes named after people
-- Accidental cure: A treatment discovered by mistake
-- Strange condition: Rare medical conditions that sound fictional
-- Psychology quirk: Cognitive biases most people experience
-- Drug origin story: Where a common medicine actually came from`,
+KEYWORD PATTERNS TO SEARCH:
+"[Scandal] real truth" | "[Controversy] India connection" | "[Scandal] whistleblower"
+"[Event] cover-up revealed" | "[Controversy] origin how it started" | "[Person] vindicated after"`,
     };
-    return chunks[category] || '';
+
+    // ─── INDIA CONNECTION OVERLAY (always appended) ───────────────
+    const indiaOverlay = `
+
+UNIVERSAL INDIA CONNECTION CHECK (always run this):
+- International figure with Indian ancestry or origin?
+- Global trend, word, or phenomenon that traces back to India?
+- Record broken by an Indian in an unexpected domain?
+- Global brand, product, or organisation with Indian roots?
+- "[Topic] India connection" | "[Person] Indian origin" | "[Foreign word] from Sanskrit / Hindi"`;
+
+    // ─── MASTER KEYWORD TEMPLATES (always appended) ───────────────
+    const masterTemplates = `
+
+MASTER KEYWORD TEMPLATES — apply to any subject in the article:
+"things you didn't know about [X]" | "[X] origin story" | "[X] named after"
+"[X] India connection" | "[X] inspired by" | "[X] debunked / myth"
+"[X] world record / first" | "[X] controversy / scandal"
+"[X] forgotten / overlooked" | "[X] almost was / nearly"
+"[X] accidentally invented / discovered" | "Reddit r/todayilearned [X]"`;
+
+    return (chunks[category] || chunks['trending']) + indiaOverlay + masterTemplates;
 }
 
 // ─── EVALUATE NEWS (7-Signal Scoring) ────────────────────────────
