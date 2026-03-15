@@ -44,9 +44,9 @@ export const runPipeline = async () => {
             try {
                 pipelineState.processedCount++;
 
-                // Rate limit cooldown for Gemini free tier
-                log(`⏳ Rate limit cooldown before item ${pipelineState.processedCount}/${rawNews.length}...`);
-                await new Promise(r => setTimeout(r, 13000));
+                // Rate limit cooldown for Gemini free tier (15 Requests Per Minute)
+                log(`⏳ Rate limit cooldown before item ${pipelineState.processedCount}/${rawNews.length}... (15s)`);
+                await new Promise(r => setTimeout(r, 15000));
 
                 // ── Duplicate Detection ──
                 if (await isDuplicate(news.link)) {
@@ -96,7 +96,7 @@ export const runPipeline = async () => {
                 log(`✅ Accepted! ${primarySignal} (Score ${overallScore}/10). Generating content...`);
 
                 // ── Content Generation (with category-specific prompts) ──
-                await new Promise(r => setTimeout(r, 13000));
+                await new Promise(r => setTimeout(r, 15000));
                 const generated = await generateContent(news, evaluation.category);
 
                 if (!generated) {

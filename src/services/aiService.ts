@@ -246,13 +246,29 @@ News Title: ${news.title}
 News Description: ${news.description}
 `;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: { responseMimeType: 'application/json' }
-        });
+        let attempt = 0;
+        let response;
+        while (attempt < 4) {
+            try {
+                response = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash',
+                    contents: prompt,
+                    config: { responseMimeType: 'application/json' }
+                });
+                break; // success
+            } catch (e: any) {
+                if (e.message?.includes('429') && attempt < 3) {
+                    attempt++;
+                    const waitTime = Math.pow(2, attempt) * 6000; // 12s, 24s, 48s
+                    console.log(`[evaluateNews] Rate limited (429). Retrying in ${waitTime/1000}s... (Attempt ${attempt}/3)`);
+                    await new Promise(r => setTimeout(r, waitTime));
+                } else {
+                    throw e; // throw if it's not a 429 or we ran out of retries
+                }
+            }
+        }
 
-        const content = response.text;
+        const content = response?.text;
         if (content) {
             return JSON.parse(content) as AIEvaluation;
         }
@@ -345,28 +361,44 @@ News Title: ${news.title}
 News Description: ${news.description}
 `;
 
-        // Use a strict JSON schema to FORCE the model to return trivia as an Array of Strings
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-            config: { 
-                responseMimeType: 'application/json',
-                responseSchema: {
-                    type: 'OBJECT' as any,
-                    properties: {
-                        headline: { type: 'STRING' as any },
-                        hookSentence: { type: 'STRING' as any },
-                        caption: { type: 'STRING' as any },
-                        hashtags: { type: 'ARRAY' as any, items: { type: 'STRING' as any } },
-                        trivia: { type: 'ARRAY' as any, items: { type: 'STRING' as any }, description: "EXACTLY 5 specific, concrete, surprising bullet points. NO generic filler." },
-                        signalBadge: { type: 'STRING' as any }
-                    },
-                    required: ["headline", "hookSentence", "caption", "hashtags", "trivia", "signalBadge"]
+        let attempt = 0;
+        let response;
+        while (attempt < 4) {
+            try {
+                // Use a strict JSON schema to FORCE the model to return trivia as an Array of Strings
+                response = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash',
+                    contents: prompt,
+                    config: { 
+                        responseMimeType: 'application/json',
+                        responseSchema: {
+                            type: 'OBJECT' as any,
+                            properties: {
+                                headline: { type: 'STRING' as any },
+                                hookSentence: { type: 'STRING' as any },
+                                caption: { type: 'STRING' as any },
+                                hashtags: { type: 'ARRAY' as any, items: { type: 'STRING' as any } },
+                                trivia: { type: 'ARRAY' as any, items: { type: 'STRING' as any }, description: "EXACTLY 5 specific, concrete, surprising bullet points. NO generic filler." },
+                                signalBadge: { type: 'STRING' as any }
+                            },
+                            required: ["headline", "hookSentence", "caption", "hashtags", "trivia", "signalBadge"]
+                        }
+                    }
+                });
+                break; // success
+            } catch (e: any) {
+                if (e.message?.includes('429') && attempt < 3) {
+                    attempt++;
+                    const waitTime = Math.pow(2, attempt) * 6000; // 12s, 24s, 48s
+                    console.log(`[generateContent] Rate limited (429). Retrying in ${waitTime/1000}s... (Attempt ${attempt}/3)`);
+                    await new Promise(r => setTimeout(r, waitTime));
+                } else {
+                    throw e; // throw if not 429 or max retries reached
                 }
             }
-        });
+        }
 
-        const content = response.text;
+        const content = response?.text;
         if (content) {
             return JSON.parse(content) as AIGeneratedContent;
         }
