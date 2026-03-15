@@ -270,47 +270,76 @@ export const generateContent = async (news: ParsedNewsItem, category: string): P
         const domainChunk = getCategoryPromptChunk(category);
 
         const prompt = `
-You are an expert content creator for IWTK (I Want To Know), a curated "did you know?" engine.
-Every item must make the reader think: "I did NOT know that."
+You are the CHIEF FACT WRITER for IWTK (I Want To Know) — India's #1 "did you know?" curator.
+Your sole job: make the reader say "HOLY MOLY, I did NOT know that!" out loud.
 
-Convert this news into an IWTK card. Dig deep — find the most mind-bending, rabbit-hole detail.
+══════════════════════════════════════════════════════════════════
+🚫 BANNED PHRASES — NEVER write anything like these:
+- "This is more significant than it appears."
+- "If you look closely at this event, it breaks several historical precedents."
+- "The immediate aftermath was completely unexpected."
+- "Most readers miss the crucial detail hidden within the timeline."
+- "This could eventually shape future policies."
+- "Surprising detail: [title]... is more significant..."
+- Any sentence that could apply to ANY news story (remove if not specific to THIS topic)
+══════════════════════════════════════════════════════════════════
 
-CRITICAL RULES FOR "trivia":
-1. DO NOT write generic philosophical statements, filler text, or vague commentary (e.g., NEVER write "This is the kind of story that makes you question everything").
-2. The "trivia" array MUST contain exactly 5 specific, concrete, surprising facts.
-3. If the provided news snippet does not contain 5 deep rabbit-hole facts, YOU MUST USE YOUR OWN WORLD KNOWLEDGE to find fascinating backstories, historical parallels, origin stories, or related rabbit-holes to reach 5 points. Do not just summarize the news; enrich it.
-4. STRIP ALL BOILERPLATE: Ignore and do not include mentions of "breaking news email", "newsletter", "follow us on social media", "podcast", or "app" from the source snippet. These MUST NOT appear in your output.
+FACT TYPOLOGY — For each of the 5 facts in "trivia", use ONE of these types:
+ [COUNTERINTUITIVE] Fact that contradicts what people assume.
+    GOOD: "Cleopatra lived closer in time to the iPhone than to the building of the pyramids."
+    BAD: "This story contradicts what we know."
 
-Return ONLY valid JSON:
-{
-  "headline": "A SHORT, PUNCHY headline (max 15 words) in 'did you know' voice. Must make reader STOP scrolling.",
-  "hookSentence": "1-2 sentences of THE most interesting part. The hook that makes you need to read more.",
-  "caption": "Full engaging caption with emojis telling the complete story.",
-  "hashtags": ["5", "relevant", "hashtags"],
-  "trivia": ["Fact 1", "Fact 2", "Fact 3", "Fact 4", "Fact 5"], // MUST BE EXACTLY 5 FASCINATING FACTS (BULLET POINTS)
-  "signalBadge": "The PRIMARY signal this story hits: one of '🎲 Surprise' | '🥇 Novelty' | '❤️ Emotion' | '📣 Shareability' | '🇮🇳 India Connection' | '📖 Explainer' | '🔄 Parallel Story'"
-}
+  [ORIGIN STORY] The surprising backstory behind a word, brand, invention, or tradition.
+    GOOD: "The word 'salary' comes from sal meaning salt — Roman soldiers were paid in salt."
+    BAD: "The origin of this is interesting."
 
-FACT TYPOLOGY - WHAT MAKES A FACT INTERESTING (Prioritize these types):
-1. Counterintuitive — "Cleopatra lived closer in time to the Moon landing than to the pyramids"
-2. Little-known facts about well-known names — Famous people with unknown stories
-3. Origin stories — Found by going down rabbit holes; the backstory nobody tells (e.g., how a brand got its name)
-4. Only / First / Last / Superlatives — "First Indian woman to…", "Only person who ever…", "Largest ever recorded…"
-5. Local-to-global — A small Indian town or person with massive global impact
-6. Historical coincidences — Two unrelated events happening at the exact same time
-7. Myth-busters — Debunking something widely believed
-8. Word & Etymology stories — How a word was coined, a new term entering the language, eponyms
-9. Listicles — "Top 10 / Top 5 things you didn't know / most visited places in the world"
-10. Process & Impact — "How XYZ was made" / "How XYZ impacts mental health / society"
+  [SUPERLATIVE] Only / First / Last / Largest / Fastest — must be specific and verifiable.
+    GOOD: "Usain Bolt's 100m record would have only placed 3rd in the 1936 Berlin Olympics by 1 second."
+    BAD: "This is one of the most impressive achievements in the field."
 
-CRITICAL: For each of the 5 points in the "trivia" array, YOU MUST assign it one of the types above.
-If the provided news description is thin, YOU MUST USE YOUR WORLD KNOWLEDGE to find these specific types of facts related to the topic.
+  [LOCAL→GLOBAL] Small Indian town, person, or invention that had massive global impact.
+    GOOD: "The USB, used by 10 billion devices, was co-invented by Ajay Bhatt from Gujarat."
+    BAD: "India has made many contributions to technology."
+
+  [HISTORICAL COINCIDENCE] Two unrelated events happening at the exact same time.
+    GOOD: "The same year Darwin published 'On the Origin of Species' (1859), oil was first commercially drilled in the US."
+    BAD: "Two things happened around the same historical period."
+
+  [MYTH-BUSTER] Debunking a popular belief. Must name the myth AND the truth.
+    GOOD: "Bulls are not enraged by red — they are colorblind. They react to the movement of the cape."
+    BAD: "A common misconception about this topic exists."
+
+  [ETYMOLOGY] How a specific word, name, or brand got its name.
+    GOOD: "The word 'Bluetooth' is named after Harald Bluetooth — a 10th-century Viking king who united warring tribes — chosen because the tech united communication protocols."
+    BAD: "The etymology of this word is interesting."
+
+══════════════════════════════════════════════════════════════════
+CRITICAL RULES:
+ 1. If the news snippet is thin/vague, DIG DEEPER using your world knowledge to find fascinating related facts about the topic.
+ 2. Every single fact must be SPECIFIC: real names, real numbers, real years.
+ 3. Each fact must be STANDALONE READABLE — a stranger who hasn't read the article should find it fascinating.
+ 4. NEVER just summarize the article. Go deeper — find the rabbit hole.
+══════════════════════════════════════════════════════════════════
 
 ${domainChunk}
 
-HEADLINE RULES:
-- Must be attention-grabbing and hit Surprise, Emotion, or Shareability
-- Examples: "🤯 The Word 'Bluetooth' Is Named After a Viking King", "This Banned Olympic Sport Will Shock You"
+Return ONLY valid JSON:
+{
+  "headline": "A SHORT, PUNCHY headline (max 15 words). Must make reader STOP scrolling. Add an emoji.",
+  "hookSentence": "1-2 sentences of THE most interesting, counterintuitive part. The hook that makes you need to read more.",
+  "caption": "Full engaging caption with emojis telling the complete story.",
+  "hashtags": ["5", "relevant", "hashtags"],
+  "trivia": [
+    "[COUNTERINTUITIVE] Specific, concrete fact with real names/numbers/years...",
+    "[ORIGIN STORY] Specific backstory with real details...",
+    "[SUPERLATIVE] The only/first/last/largest... specifics...",
+    "[MYTH-BUSTER] The myth was X, the truth is Y...",
+    "[HISTORICAL COINCIDENCE] On the same day/year as X, Y also happened..."
+  ],
+  "signalBadge": "The PRIMARY signal: one of '🎲 Surprise' | '🥇 Novelty' | '❤️ Emotion' | '📣 Shareability' | '🇮🇳 India Connection' | '📖 Explainer' | '🔄 Parallel Story'"
+}
+
+IMPORTANT: The [TYPE] prefix in the trivia array is for YOUR internal planning only. Remove it from the final output strings. Write just the fascinating fact itself.
 
 News Title: ${news.title}
 News Description: ${news.description}
