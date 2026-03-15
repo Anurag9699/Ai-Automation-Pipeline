@@ -247,7 +247,7 @@ News Description: ${news.description}
 `;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: { responseMimeType: 'application/json' }
         });
@@ -347,7 +347,7 @@ News Description: ${news.description}
 
         // Use a strict JSON schema to FORCE the model to return trivia as an Array of Strings
         const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-flash',
             contents: prompt,
             config: { 
                 responseMimeType: 'application/json',
