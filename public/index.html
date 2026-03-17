@@ -1173,9 +1173,7 @@
                     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                 </svg> Filters
             </button>
-            <button class="trigger-btn" id="forceBtn" onclick="triggerPipeline(true)" title="Clear duplicate cache and re-evaluate all RSS items"
-                style="background:linear-gradient(180deg,rgba(139,92,246,0.15)0%,rgba(109,40,217,0.1)100%);border-color:rgba(139,92,246,0.5);color:#a78bfa;animation:none;">🔄 Force Run</button>
-            <button class="trigger-btn" id="triggerBtn" onclick="triggerPipeline(false)">⚡ Run Pipeline</button>
+            <button class="trigger-btn" id="triggerBtn" onclick="triggerPipeline()">⚡ Run Pipeline</button>
         </div>
     </div>
 
@@ -1412,29 +1410,19 @@
         });
 
         // ─── PIPELINE TRIGGER ───────────────────────────────────
-        async function triggerPipeline(force = false) {
+        async function triggerPipeline() {
             const btn = document.getElementById('triggerBtn');
-            const forceBtn = document.getElementById('forceBtn');
             btn.disabled = true;
-            forceBtn.disabled = true;
-            
-            if (force) {
-                forceBtn.textContent = '⏳ Clearing & Running...';
-            } else {
-                btn.textContent = '⏳ Running...';
-            }
+            btn.textContent = '⏳ Running...';
             
             document.getElementById('pipelineOverlay').classList.add('show');
 
             try {
-                const url = force ? '/api/trigger?force=true' : '/api/trigger';
-                await fetch(url, { method: 'POST' });
+                await fetch('/api/trigger', { method: 'POST' });
                 pipelineInterval = setInterval(pollPipeline, 2000);
             } catch (e) {
                 btn.disabled = false;
-                forceBtn.disabled = false;
                 btn.textContent = '⚡ Run Pipeline';
-                forceBtn.textContent = '🔄 Force Run';
             }
         }
 
@@ -1449,11 +1437,8 @@
                 if (data.status === 'done' || data.status === 'error' || data.status === 'idle') {
                     clearInterval(pipelineInterval);
                     const btn = document.getElementById('triggerBtn');
-                    const forceBtn = document.getElementById('forceBtn');
                     btn.disabled = false;
-                    forceBtn.disabled = false;
                     btn.textContent = '⚡ Run Pipeline';
-                    forceBtn.textContent = '🔄 Force Run';
                     loadContent();
                     loadStats();
                 }
