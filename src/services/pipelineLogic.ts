@@ -80,9 +80,9 @@ export const runPipeline = async () => {
             try {
                 pipelineState.processedCount++;
 
-                // Rate limit cooldown for Gemini free tier
-                log(`⏳ Cooldown before item ${pipelineState.processedCount}/${rawNews.length}... (5s)`);
-                await new Promise(r => setTimeout(r, 5000));
+                // Rate limit cooldown for Gemini free tier (15 RPM limit -> 15s delay between requests)
+                log(`⏳ Cooldown before item ${pipelineState.processedCount}/${rawNews.length}... (15s)`);
+                await new Promise(r => setTimeout(r, 15000));
 
                 // ── AI Evaluation (7-Signal Scoring) ──
                 log(`🤖 Evaluating: "${news.title.substring(0, 60)}..."`);
