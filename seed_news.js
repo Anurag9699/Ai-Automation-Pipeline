@@ -259,13 +259,7 @@ async function seed() {
                     hookSentence: description.substring(0, 200) || HOOKS[count % HOOKS.length],
                     category: detectCategory(title),
                     caption: description.substring(0, 300) || title,
-                    trivia: JSON.stringify([
-                        `Surprising detail: ${title.split(' ').slice(0, 5).join(' ')}... is more significant than it appears.`,
-                        `If you look closely at this event, it breaks several historical precedents perfectly.`,
-                        `The immediate aftermath of this development was completely unexpected by major analysts.`,
-                        `Most readers miss the crucial detail hidden within the timeline of these events.`,
-                        `This could eventually shape future policies related to the core topic discussed here.`
-                    ]),
+                    trivia: JSON.stringify(TRIVIA_FACTS[count % TRIVIA_FACTS.length].slice(0, 3)),
                     score: 7 + (count % 3),
                     signalScores: { surprise: 2, novelty: 2, emotion: 1, shareability: 2, indiaConnection: 0, explainer: 1, parallelStory: 1 },
                     signalBadge: ['🎲 Surprise', '🥇 Novelty', '❤️ Emotion', '📣 Shareability', '📖 Explainer'][count % 5],

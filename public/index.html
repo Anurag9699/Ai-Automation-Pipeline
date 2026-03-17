@@ -518,10 +518,12 @@
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 14px;
             padding: 1.6rem;
+            min-height: 400px; /* Fixed height for consistent social media square/portrait feel */
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            justify-content: space-between; /* Push badges to top, footer to bottom */
+            gap: 1rem;
             opacity: 0;
             transform: translateY(20px);
             animation: cardAppear 0.5s ease forwards;
@@ -551,12 +553,14 @@
             left: 0;
             right: 0;
             bottom: 0;
-            /* Dark glass foundation + Cinematic vignette */
-            background: linear-gradient(to bottom,
-                    rgba(10, 10, 15, 0.8) 0%,
-                    rgba(10, 10, 15, 0.4) 25%,
-                    rgba(10, 10, 15, 0.85) 60%,
-                    rgba(10, 10, 15, 0.98) 100%);
+            /* Radial gradient to darken edges but keep center slightly brighter */
+            background: linear-gradient(
+                to bottom,
+                rgba(10, 10, 15, 0.7) 0%,
+                rgba(10, 10, 15, 0.5) 30%,
+                rgba(10, 10, 15, 0.8) 70%,
+                rgba(10, 10, 15, 0.95) 100%
+            );
             z-index: -1;
         }
 
@@ -624,68 +628,34 @@
         }
 
         /* ─── CARD: HEADLINE ─── */
+        .card-headline-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1; /* Take up vertical space to stay centered */
+        }
         .card-headline {
             font-family: 'DM Serif Display', serif;
-            font-size: 1.45rem;
-            line-height: 1.25;
+            font-size: 2.2rem; /* Much larger */
+            line-height: 1.15;
             color: #ffffff;
-            text-shadow: 0 4px 15px rgba(0, 0, 0, 1);
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 1), 0 2px 5px rgba(0,0,0,0.8); /* Heavy shadow for readability */
             letter-spacing: -0.01em;
-            margin-bottom: 0.8rem;
             font-weight: 800;
-            /* Extra bold */
+            text-align: center;
+            padding: 0 10px;
         }
 
-        /* ─── CARD: HOOK ─── */
-        .card-hook {
-            font-size: 0.9rem;
-            line-height: 1.5;
-            color: #ffffff;
-            font-weight: 700;
-            /* Bold */
-            border-left: 4px solid var(--accent-amber);
-            padding: 0.75rem 0.75rem 0.75rem 1.2rem;
-            background: rgba(0, 0, 0, 0.45);
-            border-radius: 0 10px 10px 0;
-            backdrop-filter: blur(8px);
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-        }
-
-        /* ─── CARD: TRIVIA ─── */
-        .card-trivia {
-            font-size: 0.85rem;
-            line-height: 1.55;
-            color: #f8fafc;
-            background: rgba(255, 255, 255, 0.05); /* Same simple background for all */
-            padding: 1rem 1rem 1rem 2.5rem;
-            position: relative;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.08); /* Consistent border */
-            border-left: 3px solid rgba(245, 158, 11, 0.6); /* Uniform amber left bar */
-            backdrop-filter: blur(6px);
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-            margin-bottom: 1rem;
-        }
-
-        .card-trivia::before {
-            content: '✦';
-            position: absolute;
-            left: 0.8rem;
-            top: 1.1rem;
-            font-size: 1rem;
-            line-height: 1;
-            color: var(--accent-amber); /* Uniform amber star */
-            text-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
-        }
-
+        /* ─── CARD: HOOK & TRIVIA (Removed from Card Face) ─── */
+        
         /* ─── CARD: FOOTER ─── */
         .card-footer {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            padding-top: 0.5rem;
-            border-top: 1px solid var(--border);
-            margin-top: auto; /* Pushes the footer to the bottom of the card */
+            align-items: flex-end; /* Align bottom */
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: auto;
         }
 
         .card-source {
@@ -1203,7 +1173,9 @@
                     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
                 </svg> Filters
             </button>
-            <button class="trigger-btn" id="triggerBtn" onclick="triggerPipeline()">⚡ Run Pipeline</button>
+            <button class="trigger-btn" id="forceBtn" onclick="triggerPipeline(true)" title="Clear duplicate cache and re-evaluate all RSS items"
+                style="background:linear-gradient(180deg,rgba(139,92,246,0.15)0%,rgba(109,40,217,0.1)100%);border-color:rgba(139,92,246,0.5);color:#a78bfa;animation:none;">🔄 Force Run</button>
+            <button class="trigger-btn" id="triggerBtn" onclick="triggerPipeline(false)">⚡ Run Pipeline</button>
         </div>
     </div>
 
@@ -1387,9 +1359,9 @@
                 <span class="category-tag">${getCategoryEmoji(item.category)} ${item.category}</span>
                 <span class="score-badge">${item.score}/10</span>
             </div>
-            <div class="card-headline">${item.headline || item.title}</div>
-            ${item.hookSentence ? `<div class="card-hook">${item.hookSentence}</div>` : ''}
-            <div class="card-trivia">${firstTrivia}</div>
+            <div class="card-headline-container">
+                <div class="card-headline">${item.headline || item.title}</div>
+            </div>
             <div class="card-footer" onclick="event.stopPropagation()">
                 <a class="card-source" href="${item.sourceUrl}" target="_blank" rel="noopener">${getDomain(item.sourceUrl)}</a>
                 <span class="card-time">${relativeTime(item.createdAt)}</span>
@@ -1440,18 +1412,29 @@
         });
 
         // ─── PIPELINE TRIGGER ───────────────────────────────────
-        async function triggerPipeline() {
+        async function triggerPipeline(force = false) {
             const btn = document.getElementById('triggerBtn');
+            const forceBtn = document.getElementById('forceBtn');
             btn.disabled = true;
-            btn.textContent = '⏳ Running...';
+            forceBtn.disabled = true;
+            
+            if (force) {
+                forceBtn.textContent = '⏳ Clearing & Running...';
+            } else {
+                btn.textContent = '⏳ Running...';
+            }
+            
             document.getElementById('pipelineOverlay').classList.add('show');
 
             try {
-                await fetch('/api/trigger', { method: 'POST' });
+                const url = force ? '/api/trigger?force=true' : '/api/trigger';
+                await fetch(url, { method: 'POST' });
                 pipelineInterval = setInterval(pollPipeline, 2000);
             } catch (e) {
                 btn.disabled = false;
+                forceBtn.disabled = false;
                 btn.textContent = '⚡ Run Pipeline';
+                forceBtn.textContent = '🔄 Force Run';
             }
         }
 
@@ -1466,8 +1449,11 @@
                 if (data.status === 'done' || data.status === 'error' || data.status === 'idle') {
                     clearInterval(pipelineInterval);
                     const btn = document.getElementById('triggerBtn');
+                    const forceBtn = document.getElementById('forceBtn');
                     btn.disabled = false;
+                    forceBtn.disabled = false;
                     btn.textContent = '⚡ Run Pipeline';
+                    forceBtn.textContent = '🔄 Force Run';
                     loadContent();
                     loadStats();
                 }

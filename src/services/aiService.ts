@@ -329,7 +329,8 @@ MASTER KEYWORD TEMPLATES — apply to any subject in the article:
 
 // ─── EVALUATE NEWS (7-Signal Scoring) ────────────────────────────
 
-export const evaluateNews = async (news: ParsedNewsItem): Promise<AIEvaluation | null> => {
+export const evaluateNews = async (news: ParsedNewsItem, maxRetries: number = 4): Promise<AIEvaluation | null> => {
+    console.log('--- ENTERING EVALUATE NEWS FINGERPRINT [v4] ---');
     try {
         const prompt = `
 You are a content strategist for IWTK (I Want To Know), a curated "did you know?" engine.
@@ -345,25 +346,10 @@ Score this story 0-3 on EACH of these 7 signals:
 | shareability | No impulse | Maybe | Likely | Instant "you HAVE to tell someone this" |
 | indiaConnection | None | Loose | Clear link | Unexpected Indian link to global/international story |
 | explainer | No backstory | Minor context | Clear origin story | Deep rabbit hole / The "how did we get here?" story |
-| parallelStory | No parallel | Loose similarity | Clear mirror | Exact exact historical/Indian parallel to a current event |
+| parallelStory | No parallel | Loose similarity | Clear mirror | Exact historical/Indian parallel to a current event |
 
 Also categorize it into ONE of these categories:
 "entertainment" | "music" | "sports" | "science" | "history" | "animals" | "technology" | "geography" | "health" | "trending"
-
-Return ONLY valid JSON:
-{
-  "signalScores": {
-    "surprise": 0-3,
-    "novelty": 0-3,
-    "emotion": 0-3,
-    "shareability": 0-3,
-    "indiaConnection": 0-3,
-    "explainer": 0-3,
-    "parallelStory": 0-3
-  },
-  "category": "one of the categories above",
-  "reason": "Which signal(s) scored highest and why (1 line)"
-}
 
 News Title: ${news.title}
 News Description: ${news.description}
@@ -371,34 +357,64 @@ News Description: ${news.description}
 
         let attempt = 0;
         let response;
-        while (attempt < 4) {
+        while (attempt < maxRetries) {
             try {
                 response = await ai.models.generateContent({
                     model: 'gemini-2.5-flash',
                     contents: prompt,
-                    config: { responseMimeType: 'application/json' }
+                    config: {
+                        responseMimeType: 'application/json',
+                        responseSchema: {
+                            type: 'OBJECT' as any,
+                            properties: {
+                                signalScores: {
+                                    type: 'OBJECT' as any,
+                                    properties: {
+                                        surprise:        { type: 'NUMBER' as any },
+                                        novelty:         { type: 'NUMBER' as any },
+                                        emotion:         { type: 'NUMBER' as any },
+                                        shareability:    { type: 'NUMBER' as any },
+                                        indiaConnection: { type: 'NUMBER' as any },
+                                        explainer:       { type: 'NUMBER' as any },
+                                        parallelStory:   { type: 'NUMBER' as any },
+                                    },
+                                    required: ['surprise', 'novelty', 'emotion', 'shareability', 'indiaConnection', 'explainer', 'parallelStory']
+                                },
+                                category: { type: 'STRING' as any },
+                                reason:   { type: 'STRING' as any },
+                            },
+                            required: ['signalScores', 'category', 'reason']
+                        }
+                    }
                 });
                 break; // success
             } catch (e: any) {
-                if (e.message?.includes('429') && attempt < 3) {
+                if (e.message?.includes('429') && attempt < maxRetries - 1) {
                     attempt++;
                     const waitTime = Math.pow(2, attempt) * 6000; // 12s, 24s, 48s
-                    console.log(`[evaluateNews] Rate limited (429). Retrying in ${waitTime/1000}s... (Attempt ${attempt}/3)`);
+                    console.log(`[evaluateNews] Rate limited (429). Retrying in ${waitTime/1000}s... (Attempt ${attempt}/${maxRetries - 1})`);
                     await new Promise(r => setTimeout(r, waitTime));
                 } else {
-                    throw e; // throw if it's not a 429 or we ran out of retries
+                    throw e;
                 }
             }
         }
 
         const content = response?.text;
+        console.log(`[evaluateNews] Raw Gemini response: ${content?.substring(0, 200)}`);
+
         if (content) {
-            return JSON.parse(content) as AIEvaluation;
+            const jsonStr = content.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
+            const parsed = JSON.parse(jsonStr) as AIEvaluation;
+            if (!parsed.signalScores) {
+                throw new Error(`Parsed OK but signalScores missing. Full object: ${JSON.stringify(parsed)}`);
+            }
+            return parsed;
         }
-        return null;
-    } catch (error) {
+        throw new Error('Empty response from Gemini');
+    } catch (error: any) {
         console.error('Error evaluating news with AI:', error);
-        return null;
+        throw error; // Throw so pipelineLogic can catch and log to API logs
     }
 };
 
@@ -412,73 +428,86 @@ export const generateContent = async (news: ParsedNewsItem, category: string): P
 You are the CHIEF FACT WRITER for IWTK (I Want To Know) — India's #1 "did you know?" curator.
 Your sole job: make the reader say "HOLY MOLY, I did NOT know that!" out loud.
 
-══════════════════════════════════════════════════════════════════
-🚫 BANNED PHRASES — NEVER write anything like these:
-- "This is more significant than it appears."
-- "If you look closely at this event, it breaks several historical precedents."
-- "The immediate aftermath was completely unexpected."
-- "Most readers miss the crucial detail hidden within the timeline."
-- "This could eventually shape future policies."
-- "Surprising detail: [title]... is more significant..."
-- Any sentence that could apply to ANY news story (remove if not specific to THIS topic)
-══════════════════════════════════════════════════════════════════
-
-FACT TYPOLOGY — For each of the 5 facts in "trivia", use ONE of these types:
- [COUNTERINTUITIVE] Fact that contradicts what people assume.
-    GOOD: "Cleopatra lived closer in time to the iPhone than to the building of the pyramids."
-    BAD: "This story contradicts what we know."
-
-  [ORIGIN STORY] The surprising backstory behind a word, brand, invention, or tradition.
-    GOOD: "The word 'salary' comes from sal meaning salt — Roman soldiers were paid in salt."
-    BAD: "The origin of this is interesting."
-
-  [SUPERLATIVE] Only / First / Last / Largest / Fastest — must be specific and verifiable.
-    GOOD: "Usain Bolt's 100m record would have only placed 3rd in the 1936 Berlin Olympics by 1 second."
-    BAD: "This is one of the most impressive achievements in the field."
-
-  [LOCAL→GLOBAL] Small Indian town, person, or invention that had massive global impact.
-    GOOD: "The USB, used by 10 billion devices, was co-invented by Ajay Bhatt from Gujarat."
-    BAD: "India has made many contributions to technology."
-
-  [HISTORICAL COINCIDENCE] Two unrelated events happening at the exact same time.
-    GOOD: "The same year Darwin published 'On the Origin of Species' (1859), oil was first commercially drilled in the US."
-    BAD: "Two things happened around the same historical period."
-
-  [MYTH-BUSTER] Debunking a popular belief. Must name the myth AND the truth.
-    GOOD: "Bulls are not enraged by red — they are colorblind. They react to the movement of the cape."
-    BAD: "A common misconception about this topic exists."
-
-  [ETYMOLOGY] How a specific word, name, or brand got its name.
-    GOOD: "The word 'Bluetooth' is named after Harald Bluetooth — a 10th-century Viking king who united warring tribes — chosen because the tech united communication protocols."
-    BAD: "The etymology of this word is interesting."
+IMPORTANT — You are processing THIS specific news item. Generate ALL content based ONLY on this story:
+News Title: ${news.title}
+News Description: ${news.description}
 
 ══════════════════════════════════════════════════════════════════
-CRITICAL RULES:
- 1. If the news snippet is thin/vague, DIG DEEPER using your world knowledge to find fascinating related facts about the topic.
- 2. Every single fact must be SPECIFIC: real names, real numbers, real years.
+CRITICAL RULES FOR HEADLINES:
+ 1. Max 10 words. Must NOT use fake clickbait like "You won't believe". Must stay true and fact-based.
+ 2. Must use ONE of these 4 techniques to grab attention:
+    - CONTRADICTION: "The Country That Banned Homework — And Got Smarter"
+    - SPECIFICITY (Numbers): "3,000-Year-Old Honey That's Still Edible"
+    - QUESTION: "Why Does Japan Have 7 Million Empty Houses?"
+    - STAKES: "The $74M Mission That Beat a $100M Movie to Mars"
+
+══════════════════════════════════════════════════════════════════
+CRITICAL RULES FOR "WOW" FACTS:
+ 1. If the news snippet is thin/vague, DIG DEEPER using your world knowledge to find fascinating related facts.
+ 2. THE "WOW FACT" RULE: Turn every ordinary fact into a WOW fact.
+    - MUST include a specific NUMBER (year, quantity, percentage, distance, or cost).
+    - MUST be exactly ONE clear, powerful sentence.
+    - Example BEFORE: "India's Mars mission was very cheap."
+    - Example AFTER:  "India's Mangalyaan mission cost $74 million — less than the Hollywood movie Gravity ($100M) — and reached Mars on its first attempt."
  3. Each fact must be STANDALONE READABLE — a stranger who hasn't read the article should find it fascinating.
  4. NEVER just summarize the article. Go deeper — find the rabbit hole.
+
+Do not use generic sentences such as "This is more significant than it appears," "If you look closely, it breaks historical precedents," "The immediate aftermath was completely unexpected," "Most readers miss the crucial detail hidden here," or "This could eventually shape future policies."
+
+══════════════════════════════════════════════════════════════════
+IWTK FACT TYPOLOGY — Every trivia item MUST be one of these 8 types:
+
+  1. [COUNTERINTUITIVE] Facts that contradict common assumptions.
+     GOOD: "Cleopatra lived closer to the Moon landing (1969) than to the building of the pyramids (2500 BC)."
+     BAD: "This story is more significant than it appears."
+
+  2. [ORIGIN STORY] The surprising backstory found by going down rabbit holes.
+     GOOD: "The word 'salary' comes from sal (salt) because Roman soldiers were sometimes paid in salt."
+
+  3. [WELL-KNOWN NAMES] Little-known stories about famous people or brands.
+     GOOD: "Nintendo was founded in 1889 as a playing card company, 100 years before the Game Boy."
+
+  4. [SUPERLATIVE] Only, First, Last, or Extreme records.
+     GOOD: "The USB was co-invented by Ajay Bhatt from Gujarat; it's now used by 10 billion devices."
+
+  5. [LOCAL→GLOBAL] A small Indian town or person with massive global impact.
+     GOOD: "The 'Bug' in computer science was coined by Grace Hopper after a literal moth was found in her computer in 1947."
+
+  6. [HISTORICAL COINCIDENCES] Two unrelated events happening at the exact same time.
+     GOOD: "The same year Darwin published 'Origin of Species' (1859), the first commercial oil well was drilled in the US."
+
+  7. [MYTH-BUSTER] Debunking something widely believed.
+     GOOD: "Bulls are actually colorblind to red; they react to the movement of the cape, not its color."
+
+  8. [WORD & ETYMOLOGY] How a word was coined or a brand got its name.
+     GOOD: "The word 'Bluetooth' is named after a 10th-century Viking King, Harald Bluetooth, who united Scandinavian tribes."
+
+══════════════════════════════════════════════════════════════════
+🚫 BANNED PHRASES — NEVER use these filler sentences:
+- "This is more significant than it appears."
+- "If you look closely, it breaks historical precedents."
+- "The immediate aftermath was completely unexpected."
+- "Most readers miss the crucial detail hidden here."
+- "This could eventually shape future policies."
 ══════════════════════════════════════════════════════════════════
 
 ${domainChunk}
 
 Return ONLY valid JSON:
 {
-  "headline": "A SHORT, PUNCHY headline (max 15 words). Must make reader STOP scrolling. Add an emoji.",
-  "hookSentence": "1-2 sentences of THE most interesting, counterintuitive part. The hook that makes you need to read more.",
-  "caption": "Full engaging caption with emojis telling the complete story.",
-  "hashtags": ["5", "relevant", "hashtags"],
+  "headline": "PUNCHY headline (max 10 words). Add an emoji.",
+  "hookSentence": "ONE high-impact sentence that makes you HAVE to read more.",
+  "caption": "Short, engaging caption (MAX 50 WORDS). Focus on the 'wow' factor.",
+  "hashtags": ["3-5", "relevant", "hashtags"],
   "trivia": [
-    "[COUNTERINTUITIVE] Specific, concrete fact with real names/numbers/years...",
-    "[ORIGIN STORY] Specific backstory with real details...",
-    "[SUPERLATIVE] The only/first/last/largest... specifics...",
-    "[MYTH-BUSTER] The myth was X, the truth is Y...",
-    "[HISTORICAL COINCIDENCE] On the same day/year as X, Y also happened..."
+    "[TYPE] Specific, concrete fact 1...",
+    "[TYPE] Specific, concrete fact 2...",
+    "[TYPE] Specific, concrete fact 3..."
   ],
   "signalBadge": "The PRIMARY signal: one of '🎲 Surprise' | '🥇 Novelty' | '❤️ Emotion' | '📣 Shareability' | '🇮🇳 India Connection' | '📖 Explainer' | '🔄 Parallel Story'"
 }
 
-IMPORTANT: The [TYPE] prefix in the trivia array is for YOUR internal planning only. Remove it from the final output strings. Write just the fascinating fact itself.
+IMPORTANT: Provide EXACTLY 3 trivia facts. The [TYPE] prefix is for YOUR internal planning only. Remove it from output.
 
 News Title: ${news.title}
 News Description: ${news.description}
@@ -501,7 +530,7 @@ News Description: ${news.description}
                                 hookSentence: { type: 'STRING' as any },
                                 caption: { type: 'STRING' as any },
                                 hashtags: { type: 'ARRAY' as any, items: { type: 'STRING' as any } },
-                                trivia: { type: 'ARRAY' as any, items: { type: 'STRING' as any }, description: "EXACTLY 5 specific, concrete, surprising bullet points. NO generic filler." },
+                                trivia: { type: 'ARRAY' as any, items: { type: 'STRING' as any }, description: "EXACTLY 3 specific, concrete, surprising bullet points. NO filler." },
                                 signalBadge: { type: 'STRING' as any }
                             },
                             required: ["headline", "hookSentence", "caption", "hashtags", "trivia", "signalBadge"]
@@ -523,7 +552,8 @@ News Description: ${news.description}
 
         const content = response?.text;
         if (content) {
-            return JSON.parse(content) as AIGeneratedContent;
+            const jsonStr = content.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
+            return JSON.parse(jsonStr) as AIGeneratedContent;
         }
         return null;
     } catch (error) {

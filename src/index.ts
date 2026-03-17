@@ -4,6 +4,7 @@ import path from 'path';
 import cron from 'node-cron';
 import { PrismaClient } from '@prisma/client';
 import { runPipeline, pipelineState } from './services/pipelineLogic';
+import { clearCache } from './services/redisService';
 
 dotenv.config();
 
@@ -63,10 +64,16 @@ app.get('/api/content', async (req, res) => {
             ];
         }
 
+        // Pagination
+        const page = Math.max(1, parseInt(req.query.page as string || '1'));
+        const limit = Math.max(1, Math.min(100, parseInt(req.query.limit as string || '50')));
+        const skip = (page - 1) * limit;
+
         const contents = await prisma.newsContent.findMany({
             where,
             orderBy: { createdAt: 'desc' },  // Newest first
-            take: 50
+            skip: skip,
+            take: limit
         });
         res.json(contents);
     } catch (error: any) {
@@ -121,8 +128,18 @@ app.post('/api/trigger', async (req, res) => {
     if (pipelineState.status === 'running') {
         return res.json({ message: 'Pipeline already running', status: 'running' });
     }
+    // ?force=true clears the in-memory duplicate cache before running
+    if (req.query.force === 'true') {
+        clearCache();
+    }
     runPipeline().catch(err => console.error('Background pipeline error:', err));
     res.json({ message: 'Pipeline triggered!', status: 'running' });
+});
+
+// ─── API: Force-clear the duplicate cache ───
+app.post('/api/clear-cache', (req, res) => {
+    clearCache();
+    res.json({ message: 'In-memory cache cleared. Next run will re-evaluate all RSS items.' });
 });
 
 // ─── Cron Job ───
@@ -131,14 +148,17 @@ cron.schedule('0 */3 * * *', async () => {
     try { await runPipeline(); } catch (error) { console.error('Cron job failed:', error); }
 });
 
-app.listen(Number(PORT), '0.0.0.0', () => {
+const server = app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`IWTK Server running on port ${PORT}`);
     console.log(`Cron job scheduled (every 3 hours).`);
 });
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
-    console.log('SIGTERM received, shutting down...');
-    await prisma.$disconnect();
-    process.exit(0);
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully...');
+    server.close(async () => {
+        console.log('HTTP server closed.');
+        await prisma.$disconnect();
+        process.exit(0);
+    });
 });

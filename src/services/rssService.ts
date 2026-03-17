@@ -101,9 +101,14 @@ async function scrapeOgImage(url: string): Promise<string | undefined> {
 
         if (!res.ok) return undefined;
 
-        // Get the first 100KB of the page - usually enough for <head>
-        const text = await res.text();
-        const head = text.substring(0, 100000);
+        // Use a stream-based approach to only load the first ~100KB to avoid memory exhaustion
+        if (!res.body) return undefined;
+        let head = '';
+        const reader = (res.body as unknown as AsyncIterable<Uint8Array>);
+        for await (const chunk of reader) {
+            head += Buffer.from(chunk).toString('utf-8');
+            if (head.length > 100000) break;
+        }
 
         const ogMatch = head.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
             || head.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
@@ -166,23 +171,30 @@ export const fetchNewsFromFeeds = async (): Promise<ParsedNewsItem[]> => {
 
     for (const feedUrl of RSS_FEEDS) {
         try {
+            console.log(`[RSS] Fetching feed: ${feedUrl}`);
             const feed = await fetchWithTimeout(feedUrl, 10000);
-            for (const item of feed.items) {
+            
+            // Process top 5 items per feed for better coverage
+            const topItems = feed.items.slice(0, 5);
+            
+            const processedItems = await Promise.all(topItems.map(async (item: any) => {
                 if (item.title && item.link) {
-                    // Try RSS image first, then OG image scraping
                     let imageUrl = extractImage(item);
                     if (!imageUrl) {
                         imageUrl = await scrapeOgImage(item.link);
                     }
-                    allNews.push({
+                    return {
                         title: item.title,
                         link: item.link,
                         description: cleanRSSContent(item.contentSnippet || item.content || ''),
                         pubDate: item.pubDate || new Date().toISOString(),
                         imageUrl
-                    });
+                    };
                 }
-            }
+                return null;
+            }));
+
+            processedItems.filter(Boolean).forEach(item => allNews.push(item as ParsedNewsItem));
         } catch (error) {
             console.error(`Error fetching RSS feed ${feedUrl}:`, error);
         }
